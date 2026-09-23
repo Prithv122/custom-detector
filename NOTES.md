@@ -24,8 +24,16 @@ Keep it rough. Rough is the point.
 
 **Metrics, two layers that stay separate:**
 1. Detection — mAP@50, mAP@50–95, precision, recall (per class).
-2. Task correctness — % of images whose estimated total exactly matches the recorded total,
-   plus mean absolute error in kg. An independent downstream test, not another box score.
+2. Task correctness, scored against `data/loads.csv`, never against the box labels:
+   - **Exact total** — % of images whose estimated total equals the recorded total.
+   - **Mean absolute error** in kg.
+   - **Exact plate set** (added 2026-09-23, before any photo was taken) — % of images where,
+     for every visible sleeve, the multiset of detected plate classes equals the recorded
+     `side_plates_kg` (order ignored). Stricter than exact total, because different
+     combinations collide on the same total (70 kg: L01, L08, L09). The gap between the two
+     rates is the number of "right total, wrong plates" answers.
+
+   All three are reported separately for the occluded group.
 
 ## Licence check (verified upstream 2026-09-23)
 
@@ -69,5 +77,5 @@ Keep it rough. Rough is the point.
 - [ ] Is a second gym (Gym B) actually reachable? If not, the single-gym limitation goes in
       the README plainly.
 - [ ] Does Gym A have 4 of every denomination? The full schedule needs it.
-- [ ] Add a stricter third task metric — exact plate-set match per sleeve — since totals
-      collide? Decide before training, not after seeing results.
+- [x] Add a stricter third task metric — exact plate-set match per sleeve — since totals
+      collide? **Yes, adopted 2026-09-23 before capture** (see Metrics above).

@@ -76,7 +76,8 @@ whatever was actually loaded.** If a load can't be built, substitute and write d
 
 The split is fixed **now, before any training**: 18 train / 3 val / 3 test loads, and both val
 and test contain every class. Several loads share a total (70, 90 and 110 kg each appear more
-than once) on purpose, so a right total with wrong plates is visible.
+than once) on purpose, so a right total with wrong plates is visible — the exact-plate-set
+metric catches it. That metric needs `side_plates_kg` recorded exactly as loaded, every row.
 
 ## Loose-plate shots — detection training only
 
