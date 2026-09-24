@@ -58,6 +58,22 @@ Keep it rough. Rough is the point.
 - **Learned:** in the load schedule several different plate sets add up to the same total
   (70 kg three ways, 90 kg three ways). An exact-total match can hide wrong plates.
 
+### 2026-09-24
+- **Built ahead of the Gym A visit** (photos still on phone, `loads.csv` still empty):
+  `detector.protocol` parses the load schedule straight out of `CAPTURE_PROTOCOL.md` (single
+  source of truth, so the pre-fixed split can never drift from the doc); `detector.loads`
+  validates `loads.csv` rows (arithmetic, allowed plate classes, known load ids) as errors,
+  and flags things the protocol explicitly allows (substituted plates, off-count photos) as
+  warnings instead; `detector.sort_photos` groups a phone-dump folder into bursts by a gap in
+  capture time and asks which load each burst is, then copies into `data/raw/gym_a/<load_id>/`;
+  `detector.roboflow_upload` resolves each load's split from the schedule and uploads.
+- **Tried:** auto-detecting the slate card from the image itself (OCR) instead of asking.
+  Rejected for now — misreading a slate silently corrupts the one thing this dataset's
+  discipline depends on (loads.csv never touching the labels); a wrong human answer is at
+  least visible in the manifest.
+- **Learned:** `CAPTURE_PROTOCOL.md`'s own claim ("both val and test contain every class") is
+  now a test (`test_val_and_test_cover_every_plate_class`), not just a comment in the doc.
+
 ---
 
 ## Rejected approaches

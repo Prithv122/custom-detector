@@ -4,7 +4,9 @@ version = "0.1.0"
 description = "Own labelled dataset (Roboflow) fine-tuned into a YOLO object detector on Kaggle, mAP reported against a held-out set, live demo."
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "roboflow>=1.5.0",
+]
 
 # Most projects here ship a CLI. Entry points REQUIRE a real build backend —
 # a uv virtual project ([tool.uv] package = false) installs nothing, so the
