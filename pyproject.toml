@@ -1,14 +1,18 @@
 [project]
 name = "custom-detector"
 version = "0.1.0"
-description = "Own labelled dataset (Roboflow) fine-tuned into a YOLO object detector on Kaggle, mAP reported against a held-out set, live demo."
+description = "Weightlifting-plate detector: audited public dataset (Roboflow, CC BY 4.0), leakage-free re-split, RF-DETR-S fine-tuned on Kaggle."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "imagehash>=4.3",
+    "numpy>=2",
+    "pillow>=11",
+    "python-dotenv>=1",
     "roboflow>=1.5.0",
 ]
 
-# Most projects here ship a CLI. Entry points REQUIRE a real build backend —
+# Most projects here ship a CLI. Entry points REQUIRE a real build backend â€”
 # a uv virtual project ([tool.uv] package = false) installs nothing, so the
 # documented command fails with "No module named ..." even while tests pass
 # (pytest's pythonpath hides it). Bit us on A1, nearly again on A3.
@@ -21,7 +25,7 @@ custom-detector = "detector.cli:main"
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-# ⚠️ When /new-project renames src/app, update BOTH the line below AND the
+# âš ï¸ When /new-project renames src/app, update BOTH the line below AND the
 # [project.scripts] target above.
 [tool.hatch.build.targets.wheel]
 packages = ["src/detector"]

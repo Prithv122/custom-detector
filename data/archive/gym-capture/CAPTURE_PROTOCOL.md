@@ -1,5 +1,9 @@
 # Capture protocol
 
+> **OBSOLETE (2026-09-24) — never executed.** The project switched to a public dataset before
+> any photo was taken. Kept as a record of the original design; see `../README.md` and
+> the dataset section of `NOTES.md`.
+
 Each photo gets two independent ground truths:
 
 1. **Bounding boxes**, drawn later during labelling.
