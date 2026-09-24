@@ -7,36 +7,57 @@ Keep it rough. Rough is the point.
 
 ---
 
-## Settled design (2026-09-23)
+## Settled design (revised 2026-09-24)
+
+Replaces the own-photo design of 2026-09-23 (kept below under *Superseded design*).
 
 | Decision | Chose | Why |
 |---|---|---|
-| Domain | Gym weight plates | Every image is my own → publishable dataset, clean-clone reproducible. Not a COCO class. |
-| Detector classes | `25kg` `20kg` `15kg` `10kg` `5kg` `2.5kg` | Six visually meaningful classes; fits a 2-session budget. |
-| Loaded weight | **Derived task, not a detection class** | Detect plates → class→kg → group by sleeve → sum → + bar. Keeps detection and task correctness as separate layers. |
-| Detector | RF-DETR-S (`rfdetr`, Apache-2.0) | Repo stays MIT. Benchmarked on RF100-VL, i.e. small custom datasets. 32M params → trains on a Kaggle T4, infers on CPU. M is the step up if S underfits. |
-| Ground truth for load | Recorded at capture, from what is physically on the bar | If the "true total" came from the box labels, the task metric would just re-score the detector against its own labels. |
-| Dataset | Gym A → train/val/test; Gym B → test only | Gym B measures how far the model degrades on plates it has never seen. |
-| Camera rule | ~30–45° to the sleeve | End-on shows only the outer plate; side-on shows edges, and iron plates look identical edge-on. |
-| Occlusion | Photos with any fully hidden plate → separate *occluded* group | Reported on its own, not silently counted as failures. |
-| Left/right rule | Symmetric loading assumed. One sleeve visible → per-side sum × 2. Both visible → sum each, flag a mismatch. | Standard gym practice; stated so the metric is unambiguous. |
-| Split | By `load_id`, never by photo; split fixed in `data/CAPTURE_PROTOCOL.md` before training | Six photos of one load are near-duplicates — a random split leaks. |
+| Domain | Weight plates, side-on views of a loaded sleeve | Not a COCO class. Same domain as the original plan, but the images are now colour-coded competition/bumper plates on a loading rig, not iron gym plates at 30–45°. The README says so plainly. |
+| Dataset | ProjektCiezary *Weightlifting Plates*, Roboflow Universe, **v10 pinned** | Per-weight boxes already exist (2,251 images). Own capture (~225 photos + labelling) was the slowest step of the old plan. |
+| Cleaning | Exclude 255 of 2,251 by rule → **1,996 kept** | 225 `ZE_*` competition-video crops + 25 press photos (third-party imagery the uploader's CC BY can't license), 3 images with visible but unboxed plates, 2 with one plate labelled as two weights. |
+| Classes | All 10 plate weights (`0.5kg`…`25kg`) + `zacisk` (collar), as labelled | Dropping 0.5–2 kg would leave visible plates unboxed in ~1,960 images, i.e. teach the model they are background. Every class has ≥149 train and ≥70 test images. |
+| Split | **Test = whole capture date 2025-05-04; val = whole sessions; train = rest** → 1,263 / 331 / 402 | The published split leaks (below). Test is a day the model never saw. Rule-based, from dataset support only — see `detector.dataset.split`. |
+| Source of truth | `data/manifest.csv` (committed, one row per export image) | Holds hashes, boxes per class, exclusion reason, session and split. CI checks the split invariants from it without the images; a local test proves it rebuilds byte-for-byte from the export. |
+| Detector | RF-DETR-S (`rfdetr`, Apache-2.0) | Unchanged. Repo stays MIT. |
+| Metrics | Detection only (below) | The loaded-weight metric is gone: it needed a load recorded independently of the labels. Summing labelled plates and scoring against that sum would re-score the detector against its own labels. |
 
-**Metrics, two layers that stay separate:**
-1. Detection — mAP@50, mAP@50–95, precision, recall (per class).
-2. Task correctness, scored against `data/loads.csv`, never against the box labels:
-   - **Exact total** — % of images whose estimated total equals the recorded total.
-   - **Mean absolute error** in kg.
-   - **Exact plate set** (added 2026-09-23, before any photo was taken) — % of images where,
-     for every visible sleeve, the multiset of detected plate classes equals the recorded
-     `side_plates_kg` (order ignored). Stricter than exact total, because different
-     combinations collide on the same total (70 kg: L01, L08, L09). The gap between the two
-     rates is the number of "right total, wrong plates" answers.
+**Metrics** (planned; nothing trained yet):
+- mAP@50 and mAP@50–95 on the held-out date — the headline pair.
+- Per-class AP, precision, recall — over the 10 plates; the collar reported on its own.
+- Confusion between same-colour pairs (25/2.5 red, 20/2 blue, 15/1.5 yellow, 10/1 green,
+  5/0.5 white): the model must separate these mostly by size.
+- Val → test gap: val shares dates with train, test doesn't. A large gap = the model learned the
+  day's background, not the plates.
+- Not supported by the data: small-object analysis (3% of boxes are COCO-small) and an occlusion
+  breakdown (no occlusion flag in the labels).
 
-   All three are reported separately for the occluded group.
+## Dataset audit (2026-09-24)
 
-## Licence check (verified upstream 2026-09-23)
+Programmatic over all 2,251 images; model vision only on 28 flagged or sampled images.
 
+- **Leakage in the published split.** 256-bit pHash: 1,117 images have a near-identical twin
+  (distance ≤ 20); for 315 of them the twin sits in a different split. Cause: each session is a
+  series of shots of one rig with one small plate swapped between shots — `…120057` (train) and
+  `…120030` (valid) are the same bar, 27 s apart. No exact duplicates (SHA-256).
+- **Near-duplicates never cross dates.** A 64-bit pHash flagged 1,311 cross-date pairs; all were
+  false positives (256-bit: closest cross-date pair is 32). So date/session grouping fixes it.
+- **Provenance.** 2,001 phone-timestamped images across 7 dates (May–Nov 2025), same gym
+  backgrounds → consistent with the uploader's own photos (inference, not proof). `ZE_*`: cropped,
+  upscaled competition video — sponsor boards, athletes' arms. Numbered files (`31.webp`…): press
+  photos from Olympic / Beijing 2008 / Santiago 2023 events, one with an agency credit.
+- **Classes are tied to dates.** e.g. no 15 kg on 2025-05-01, 09-29, 10-09; no 5 kg on 3 dates.
+  A split by date must be checked for class coverage — the test-date rule does exactly that.
+- **Domain shift in test.** 2025-05-04 is the only date shot portrait (480×640) and uncropped,
+  with a distinctive backdrop; other dates are cropped square. Report it next to the numbers.
+- Clean split check: no cross-split pair within 30 bits; closest are 32 (train/val), 84
+  (train/test), 82 (val/test).
+
+## Licence check
+
+- Dataset: README and every image's COCO licence field say **CC BY 4.0** (v10, owner
+  "ProjektCiezary", no description or author named). Attribution + "changes made" notice go in
+  the README. We don't claim to have verified who shot the kept images.
 - Ultralytics YOLO: **AGPL-3.0**, weights included; README sells an Enterprise Licence for
   production and internal use. Excluded — a public demo would pull the repo onto the AGPL path.
 - `rfdetr` 1.10.1: Apache-2.0 (GitHub + PyPI). DINOv2 backbone: Apache-2.0.
@@ -58,40 +79,61 @@ Keep it rough. Rough is the point.
 - **Learned:** in the load schedule several different plate sets add up to the same total
   (70 kg three ways, 90 kg three ways). An exact-total match can hide wrong plates.
 
-### 2026-09-24
+### 2026-09-24 (morning) — capture pipeline
 - **Built ahead of the Gym A visit** (photos still on phone, `loads.csv` still empty):
-  `detector.protocol` parses the load schedule straight out of `CAPTURE_PROTOCOL.md` (single
-  source of truth, so the pre-fixed split can never drift from the doc); `detector.loads`
-  validates `loads.csv` rows (arithmetic, allowed plate classes, known load ids) as errors,
-  and flags things the protocol explicitly allows (substituted plates, off-count photos) as
-  warnings instead; `detector.sort_photos` groups a phone-dump folder into bursts by a gap in
-  capture time and asks which load each burst is, then copies into `data/raw/gym_a/<load_id>/`;
-  `detector.roboflow_upload` resolves each load's split from the schedule and uploads.
-- **Tried:** auto-detecting the slate card from the image itself (OCR) instead of asking.
-  Rejected for now — misreading a slate silently corrupts the one thing this dataset's
-  discipline depends on (loads.csv never touching the labels); a wrong human answer is at
-  least visible in the manifest.
-- **Learned:** `CAPTURE_PROTOCOL.md`'s own claim ("both val and test contain every class") is
-  now a test (`test_val_and_test_cover_every_plate_class`), not just a comment in the doc.
+  a protocol parser reading the load schedule straight out of `CAPTURE_PROTOCOL.md`, a
+  `loads.csv` validator, a burst sorter grouping a phone dump by capture-time gap, and an
+  uploader that resolved each load's split from the schedule. All retired the same day
+  (commit `ac1b874` has them).
+- **Tried:** auto-detecting the slate card with OCR. Rejected — a misread slate would silently
+  corrupt the answer key.
+
+### 2026-09-24 (evening) — switched to a public dataset
+- **Tried:** searched Roboflow Universe, Kaggle and Hugging Face for per-weight plate boxes.
+  Kaggle/HF have none. One Roboflow set qualified (ProjektCiezary); the rest were one generic
+  "plate" class, colour labels, or under ~500 images. Alternatives shortlisted in case it failed
+  the audit: Aquarium (CC BY 4.0, 638 images, penguin/puffin overlap COCO "bird") and Laboro
+  Tomato (CC BY-NC-SA 4.0).
+- **Broke:** the published split — see *Dataset audit*. Its own hosted model (mAP@50 52%) was
+  trained and scored on that leaky split, so it is not a baseline we can quote.
+- **Learned:** a 64-bit perceptual hash is too coarse for a fixed-rig scene — every close-up of a
+  bar sleeve looks alike at 8×8. 256 bits separated same-session twins (≤ 20) from different-day
+  shots (≥ 32) cleanly.
+- **Learned:** the burst-by-time-gap idea from the retired sorter carried straight over — it is
+  now how sessions are formed for the split.
 
 ---
+
+## Superseded design (2026-09-23) — kept for the record
+
+Own photographs at two gyms, 6 classes (`25kg`…`2.5kg`), a split fixed by load before capture,
+Gym B as a test-only domain-shift set, and a second metric layer — exact loaded weight, exact
+plate set per sleeve, mean kg error — scored against the load **recorded at capture** in
+`loads.csv`, never derived from labels. Capture protocol and answer-key template:
+`data/archive/gym-capture/`. Dropped because collection was the bottleneck; the loaded-weight
+layer could not survive the switch (no independent ground truth in a public dataset).
 
 ## Rejected approaches
 
 | Approach | Why rejected |
 |---|---|
-| Document marks (signature/stamp/QR) | Strongest capstone link, but my real documents carry personal data and can't be published — breaks clean-clone reproducibility. |
-| Candlestick chart patterns | Boxes are subjective → mAP measures labeller consistency, not the model. Pretrained models already exist. |
+| Own gym photography (Gym A/Gym B) | Superseded 2026-09-24 — ~225 photos + labelling for a result a public dataset now gives. |
+| ProjektCiezary's published split | Leaks: 315 images have a near-identical twin in another split. |
+| Keeping `ZE_*` and press images | Third-party footage/photos; the uploader's CC BY can't license them. |
+| Six classes (dropping 0.5–2 kg) | Would leave visible plates unboxed = trained as background. Merge, don't drop, if ever reduced. |
+| Loaded-weight metric on the public set | No independent ground truth; it would just re-score the labels. |
+| Document marks (signature/stamp/QR) | Real documents carry personal data and can't be published. |
+| Candlestick chart patterns | Boxes are subjective → mAP measures labeller consistency, not the model. |
 | Indian currency notes | Common Kaggle project; mAP likely saturates near 0.95 and proves little. |
-| FMCG shelf SKUs, PCB parts, road hazards | Fine-grained classes, tiny objects or heavy occlusion — too risky for ~200 images in 2 sessions. |
-| Bar load as a detection class | Mixes detection with arithmetic; loses the independent task metric. |
+| FMCG shelf SKUs, PCB parts, road hazards | Fine-grained classes, tiny objects or heavy occlusion. |
 | Ultralytics YOLO | AGPL-3.0 (see licence check). |
-| Roboflow's random train/val/test split | Leaks near-duplicate photos of one load across splits. |
 
 ## Open questions
 
-- [ ] Is a second gym (Gym B) actually reachable? If not, the single-gym limitation goes in
-      the README plainly.
-- [ ] Does Gym A have 4 of every denomination? The full schedule needs it.
-- [x] Add a stricter third task metric — exact plate-set match per sleeve — since totals
-      collide? **Yes, adopted 2026-09-23 before capture** (see Metrics above).
+- [ ] Does RF-DETR's COCO loader accept the Roboflow placeholder category `objects` (id 0) as-is,
+      or does it need dropping? Check before the first training run.
+- [ ] Kaggle phone verification (GPU quota) — confirm before training.
+- [ ] Mirror the cleaned 1,996-image subset to the Hugging Face Hub (CC BY permits it, with
+      attribution) so a clean clone needs no Roboflow key? Decide before shipping.
+- [ ] Ask the dataset owner who took the phone photos? Only matters if the demo goes beyond a
+      portfolio.
