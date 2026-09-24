@@ -120,6 +120,11 @@ uv run custom-detector prepare       # cleaned, re-split COCO → data/processed
 uv run custom-detector summary       # split sizes, class coverage, cross-split duplicates
 ```
 
+Training runs on a free Kaggle GPU: import `notebooks/train_rfdetr_kaggle.ipynb` into Kaggle,
+set *Accelerator* to GPU T4, turn *Internet* on, add `ROBOFLOW_API_KEY` under *Secrets*, and run
+all. It rebuilds the same cleaned split from the pinned export and the committed manifest,
+checks it, trains RF-DETR-S, and writes metrics and val/test predictions to `results/`.
+
 `uv run custom-detector manifest` rebuilds `data/manifest.csv` from the export. With the export
 present, the test suite checks the rebuild matches the committed file exactly.
 

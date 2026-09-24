@@ -102,6 +102,27 @@ Programmatic over all 2,251 images; model vision only on 28 flagged or sampled i
 - **Learned:** the burst-by-time-gap idea from the retired sorter carried straight over — it is
   now how sessions are formed for the split.
 
+### 2026-09-24 (night) — training notebook
+- **Built:** `notebooks/train_rfdetr_kaggle.ipynb`. Clones the repo, rebuilds the cleaned split with
+  the same `download` + `materialize` code as the CLI, asserts 1,263 / 331 / 402 and that every
+  split holds exactly the manifest's files, trains RF-DETR-S, then writes val and test
+  predictions as flat CSV rows (file, class name, confidence, box) plus `metrics.csv` and a run
+  record (commit, versions, GPU, minutes, config).
+- **Decided — data path:** Roboflow key as a Kaggle Secret, dataset rebuilt in the notebook.
+  Over an HF mirror: the kept images' photographer isn't verified, so publishing a second copy
+  adds exposure for no gain, and the rebuild is already proven exact by the local test. Over a
+  private Kaggle dataset: nobody else could reproduce from it.
+- **Decided — test discipline:** best checkpoint chosen on `valid` (`best_model_metric="map"`
+  default); `run_test=True` scores `test` once at the end. No config change is allowed because
+  of a test number.
+- **Decided — predictions on disk:** same-colour confusion and per-class P/R are computed from the
+  saved predictions, off-GPU, so the evaluation code gets real tests in CI.
+- **Not yet known:** time per epoch on a T4, and whether batch 8 × accum 2 fits in 16 GB
+  (fallback: 4 × 4). `rfdetr` exposes no seed in `TrainConfig` — one run is one sample; say so
+  next to the numbers.
+- **Checked:** `src/` compiles on Python 3.11 (Kaggle's image may not be 3.12); the notebook
+  imports the modules from `src/` instead of installing the package, which requires 3.12.
+
 ---
 
 ## Superseded design (2026-09-23) — kept for the record
@@ -127,13 +148,16 @@ layer could not survive the switch (no independent ground truth in a public data
 | Indian currency notes | Common Kaggle project; mAP likely saturates near 0.95 and proves little. |
 | FMCG shelf SKUs, PCB parts, road hazards | Fine-grained classes, tiny objects or heavy occlusion. |
 | Ultralytics YOLO | AGPL-3.0 (see licence check). |
+| HF / Kaggle mirror of the cleaned images | Re-publishes photos whose author isn't verified; the manifest + pinned export already rebuild the set exactly. |
 
 ## Open questions
 
-- [ ] Does RF-DETR's COCO loader accept the Roboflow placeholder category `objects` (id 0) as-is,
-      or does it need dropping? Check before the first training run.
+- [x] RF-DETR and the placeholder category `objects` (id 0): `rfdetr` 1.11.0 drops an unannotated
+      category that other categories name as their supercategory (`filter_parent_categories` in
+      `rfdetr/datasets/coco.py`), and maps val/test labels through the train split's mapping.
+      Leave the exported categories as they are; the notebook pins 1.11.0.
 - [ ] Kaggle phone verification (GPU quota) — confirm before training.
-- [ ] Mirror the cleaned 1,996-image subset to the Hugging Face Hub (CC BY permits it, with
-      attribution) so a clean clone needs no Roboflow key? Decide before shipping.
+- [x] How the data reaches Kaggle: rebuilt inside the notebook from the pinned export + the
+      committed manifest, with the Roboflow key as a Kaggle Secret. No HF mirror (see log).
 - [ ] Ask the dataset owner who took the phone photos? Only matters if the demo goes beyond a
       portfolio.
