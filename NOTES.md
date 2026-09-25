@@ -158,6 +158,108 @@ the comparison.
 come out. Nothing above gets edited after the run. Anything learned goes in the log as a
 separate, dated entry.
 
+## Recolouring test (fixed 2026-09-25, before any image was altered)
+
+Written after the backdrop check came out *for*. No image has been recoloured and no inference
+has been run locally. The only numbers looked up while writing this are group sizes from
+`results/backdrop_boxes.csv`, needed to size the arms.
+
+**Question.** The backdrop check found an association: all 40 test 1.5 kg plates read as
+0.5 kg sit in front of a yellow backdrop. **If only the backdrop colour changes, with the same
+checkpoint, the same image and the same plate pixels, does the read change?** Yellow → blue
+should turn misreads into correct reads. Blue → yellow should do the opposite.
+
+**Units.** Every test photo holds exactly one 1.5 kg plate, so one box is one image. Boxes are
+independent and plain binomial counts are valid. Groups come from Run 1's outcomes
+(`backdrop_boxes.csv`), and "blue side" / "yellow side" means ring median b\* ≤ 0 or > 0.
+The sign of b\* is the neutral point of the colour space, not a cut-off tuned on the data.
+- **M** = misread as 0.5 kg: 40 boxes, all on the yellow side.
+- **C-blue** = read correctly, blue side: 19 boxes.
+- **C-yellow** = read correctly, yellow side: 17 boxes.
+- Missed (21) and other-class (3) boxes are not in any arm.
+
+**1. The transformation.**
+- Input: the prepared test image, RGB 8-bit, converted to CIELAB exactly as in the backdrop
+  check (sRGB, D65, `srgb_to_lab`). The ring is `ring_mask` from the backdrop check, unchanged:
+  margin `max(8, 0.25 × max(w, h))`, every ground-truth box removed, pure black removed.
+- Recolour: for every pixel in the mask, **keep L\*** and set (a\*, b\*) to the target colour.
+  Convert back to sRGB, clip to [0, 255] and round to 8-bit. Keeping L\* keeps the texture,
+  edges and shading, so the only thing changed is colour. There's no per-pixel "is it yellow"
+  rule: every ring pixel is recoloured.
+- **Target colours, fixed by rule and not by outcome.** For each test 1.5 kg box, take the
+  median a\* and b\* of its ring. *Blue target* = the median of those over boxes with ring
+  b\* ≤ 0. *Yellow target* = the same over boxes with ring b\* > 0. Both use every 1.5 kg box
+  on that side, whatever its outcome. Report the two targets and the share of pixels clipped.
+- Pixels outside the mask are copied unchanged. Plate pixels are never touched.
+- The altered image goes to the model **in memory**. It is never saved as a JPEG, because
+  re-compression would change pixels outside the mask.
+
+**2. Arms.**
+
+| Arm | Boxes | Mask | Target | Role |
+|---|---|---|---|---|
+| **Ring** | M (40) | ring | blue | **primary** |
+| **Sham** | M (40) | ring | the pixel's own (a\*, b\*), a Lab round trip | noise floor |
+| **Whole** | M (40) | every pixel outside all ground-truth boxes (pure black removed) | blue | reads a null ring result |
+| **Reverse** | C-blue (19) | ring | yellow | the opposite direction |
+| **Keep** | C-yellow (17) | ring | blue | does recolouring break correct reads? |
+
+**3. Inference and outcome.**
+- Model: the Run 1 checkpoint (`models/kaggle-run1/run/checkpoint_best_total.pth`),
+  RF-DETR-S at resolution 512. Run locally on CPU with **rfdetr 1.11.0**, the same version as
+  the Kaggle run. Versions, device and checkpoint SHA-256 go in the output.
+- Each box's outcome uses Run 1's matching exactly: class-agnostic greedy, IoU 0.5,
+  confidence threshold **0.80**, over all predictions in the image. There are four possible
+  outcomes: `1.5kg`, `0.5kg`, `missed`, `other`.
+- **Flip** = the outcome becomes `1.5kg` (Ring, Sham, Whole), or `0.5kg` (Reverse). Any other
+  change is counted and reported separately and is never a flip. For Keep, count how many stay
+  `1.5kg`.
+- **Baseline gate, run first.** Run the same local CPU pipeline on the *unaltered* images. The
+  outcomes must match Run 1's for all 76 boxes in the arms (M + C-blue + C-yellow). A box whose
+  baseline differs from Run 1 is dropped from every arm and reported. **More than 2 such boxes
+  → stop, no verdict.** The CPU run doesn't reproduce the GPU run closely enough to compare.
+  Every flip is measured against the *local* baseline, never against the Kaggle predictions.
+- Secondary, not decisive: for each M box, the highest confidence of any `1.5kg` prediction
+  with IoU ≥ 0.5 to the box, at any confidence, baseline vs Ring. Report the median change.
+
+**4. Decision rule** (counts out of the M boxes that pass the gate, called n below: 40 if none
+are dropped).
+- **Pipeline noise:** Sham flips > 2 → no verdict. Find the pipeline bug first.
+- **For (local):** Ring flips ≥ n/2 (20 of 40), and Sham flips ≤ 2.
+- **For (scene):** Ring flips < n/2, Whole flips ≥ n/2, Sham flips ≤ 2. The backdrop matters,
+  but only as the colour of the whole scene, not just the area next to the plate.
+- **Against:** Ring and Whole flips both ≤ n/10 (4 of 40), and Sham flips ≤ 2.
+- **Inconclusive:** anything else.
+- Reported with Wilson 95 % CIs next to the verdict, but not deciding it: Reverse flips out of
+  19 and Keep out of 17. If *for* comes with Reverse flips near zero, the effect goes one way
+  only. If Keep loses reads, recolouring damages images in general and a *for* is weaker. Say
+  both plainly.
+
+**What each answer means.**
+- *For* (either kind): the backdrop colour causes the misread with this checkpoint on this
+  date. Run 2 gets its target, colour augmentation, with the success criterion already listed
+  in the log (test 1.5 kg recall on yellow-backdrop plates, 0.5 kg precision, no other class
+  outside its Run 1 CI). That criterion is re-committed on its own before training.
+- *Against*: the association doesn't carry over to an intervention on surrounding colour. No
+  Run 2 on this basis. The README reports the failure, the association, and the negative
+  intervention. Move on to the demo and ship.
+- *Inconclusive* or *pipeline noise*: no Run 2. Report as it stands and ship.
+
+**What this can't show.**
+- Plate pixels stay untouched, so the test covers only "yellow surroundings confuse the
+  model". It can't test the other route: yellow light shifting the camera's white balance and
+  making the plate itself look pale. *Against* does not rule that out.
+- Keeping L\* makes the blue lighter than the real dark-blue backdrop. The recoloured
+  images are a partial move toward blue, not a copy of it.
+- One checkpoint and one test date. A causal answer here is about this model, not
+  about detectors in general.
+
+**Order:** this protocol → code + synthetic-image tests (the mask is the only place pixels
+change, L\* is kept within rounding, the Sham round trip moves no channel by more than 1, the
+targets come out of the rule) → baseline gate → one run of all five arms → output committed
+unedited. Nothing above gets edited after the run. Anything learned goes in the log as a
+separate, dated entry.
+
 ## Dataset audit (2026-09-24)
 
 Programmatic over all 2,251 images; model vision only on 28 flagged or sampled images.
