@@ -1,8 +1,9 @@
-"""Console entry point: download the export, build the manifest, prepare the training set."""
+"""Console entry point: download the export, build the manifest, prepare the data, evaluate."""
 
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import sys
 from collections import Counter
@@ -14,11 +15,13 @@ from detector.dataset import CLASSES
 from detector.dataset.manifest import build_manifest, read_manifest, write_manifest
 from detector.dataset.prepare import download, materialize
 from detector.dataset.split import assign_splits, cross_split_near_duplicates
+from detector.evaluate import evaluate, format_report
 
 DATA_DIR = Path(__file__).resolve().parents[2] / "data"
 EXPORT_DIR = DATA_DIR / "raw" / "projektciezary_v10_coco"
 MANIFEST = DATA_DIR / "manifest.csv"
 PREPARED_DIR = DATA_DIR / "processed" / "plates_v10_clean"
+RESULTS_DIR = DATA_DIR.parent / "results"
 
 
 def _cmd_download(args: argparse.Namespace) -> int:
@@ -42,6 +45,16 @@ def _cmd_prepare(args: argparse.Namespace) -> int:
     counts = materialize(Path(args.export), read_manifest(Path(args.manifest)), Path(args.out))
     for split, n in counts.items():
         print(f"{split}: {n} images")
+    return 0
+
+
+def _cmd_evaluate(args: argparse.Namespace) -> int:
+    report = evaluate(Path(args.prepared), Path(args.results))
+    out = Path(args.results)
+    (out / "evaluation.json").write_text(json.dumps(report, indent=2) + "\n")
+    text = format_report(report)
+    (out / "evaluation.md").write_text(text + "\n", encoding="utf-8")
+    print(text)
     return 0
 
 
@@ -84,6 +97,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--manifest", default=str(MANIFEST))
     p.add_argument("--out", default=str(PREPARED_DIR))
     p.set_defaults(func=_cmd_prepare)
+
+    p = sub.add_parser("evaluate", help="Score saved predictions (needs the prepared dataset)")
+    p.add_argument("--prepared", default=str(PREPARED_DIR))
+    p.add_argument("--results", default=str(RESULTS_DIR))
+    p.set_defaults(func=_cmd_evaluate)
 
     p = sub.add_parser("summary", help="Print split sizes and class coverage from the manifest")
     p.add_argument("--manifest", default=str(MANIFEST))
