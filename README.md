@@ -8,7 +8,7 @@
 
 **Live demo:** not deployed yet
 **Stack:** Python 3.12 · RF-DETR-S (Apache-2.0) · Roboflow (dataset source) · Kaggle GPU (training) · imagehash / NumPy (dataset audit)
-**Status:** dataset cleaned and split; model not trained yet.
+**Status:** first training run done (one run, one seed); error analysis and demo pending.
 
 ---
 
@@ -92,15 +92,47 @@ flowchart LR
 
 ## 5. Results
 
-Not trained yet. Planned, all on the held-out date:
+One training run: RF-DETR-S, 50-epoch budget, early-stopped after epoch 39, best checkpoint
+(epoch 36) chosen on val. Tesla T4, 162 min. Test = the held-out capture date, scored once.
+`rfdetr` has no seed option, so this is a single sample; run-to-run spread is unmeasured.
+Raw numbers: [`results/`](results/).
 
-- mAP@50 and mAP@50–95.
-- Per-class AP, precision and recall; the collar reported separately from the plates.
-- Confusion between same-colour pairs (25/2.5, 20/2, 15/1.5, 10/1, 5/0.5 kg).
-- Val → test gap, to show how much of the score survives a new day.
+| | Val (best epoch) | Test (unseen date) | Gap |
+|---|--:|--:|--:|
+| mAP@50 | 0.993 | **0.953** | −0.040 |
+| mAP@50–95 | 0.829 | **0.741** | −0.088 |
+| Precision / recall | 0.976 / 0.972 | 0.916 / 0.963 | |
+
+Per-class AP (@50–95):
+
+| Class | Val | Test | Gap |
+|---|--:|--:|--:|
+| 25 kg | 0.936 | 0.891 | −0.045 |
+| 20 kg | 0.908 | 0.864 | −0.044 |
+| 15 kg | 0.926 | 0.851 | −0.075 |
+| 10 kg | 0.892 | 0.825 | −0.067 |
+| 5 kg | 0.734 | 0.685 | −0.048 |
+| 2.5 kg | 0.757 | 0.706 | −0.051 |
+| 2 kg | 0.748 | 0.698 | −0.049 |
+| 1.5 kg | 0.842 | **0.611** | **−0.231** |
+| 1 kg | 0.734 | 0.676 | −0.058 |
+| 0.5 kg | 0.782 | **0.516** | **−0.265** |
+| collar (`zacisk`) | 0.864 | 0.826 | −0.038 |
+
+What this does and doesn't show so far:
+
+- Nine of the eleven classes lose about 0.04–0.08 AP on the new day. **0.5 kg and 1.5 kg lose
+  four to five times that.**
+- Plates are smaller in the frame on the test date (portrait, uncropped): median box height
+  drops from 0.23 to 0.16 of the image for small plates, and from 0.55 to 0.35 for 25 kg.
+  But 1 kg and 2 kg shrink just as much and only lose ~0.05, so **size alone doesn't explain
+  the two outliers.** Both share a colour with a heavier plate (0.5 / 5 kg white, 1.5 / 15 kg
+  yellow), which is what the same-colour confusion analysis will test. Not yet measured.
+- Val is optimistic by design: it shares capture dates with train. The test gap is the number
+  that describes a new day.
 
 Roboflow's hosted model for this dataset reports mAP@50 52%, but on the leaky split, so it is
-not quoted as a baseline.
+not a comparable baseline.
 
 ## 6. How to run
 

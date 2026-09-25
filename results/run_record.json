@@ -1,0 +1,23 @@
+{
+  "commit": "6220174c530d6f64e2d4c8771668e3c8799b6208",
+  "rfdetr": "1.11.0",
+  "torch": "2.10.0+cu128",
+  "gpu": "Tesla T4",
+  "train_minutes": 161.9,
+  "split_sizes": {
+    "train": 1263,
+    "val": 331,
+    "test": 402
+  },
+  "train_config": {
+    "epochs": 50,
+    "batch_size": 8,
+    "grad_accum_steps": 2,
+    "lr": 0.0001,
+    "early_stopping": true,
+    "early_stopping_patience": 10,
+    "run_test": true,
+    "log_per_class_metrics": true
+  },
+  "pred_threshold": 0.01
+}

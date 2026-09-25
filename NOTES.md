@@ -123,6 +123,25 @@ Programmatic over all 2,251 images; model vision only on 28 flagged or sampled i
 - **Checked:** `src/` compiles on Python 3.11 (Kaggle's image may not be 3.12); the notebook
   imports the modules from `src/` instead of installing the package, which requires 3.12.
 
+### 2026-09-25 — first Kaggle run
+- **Ran:** notebook at `6220174`, Tesla T4, torch 2.10.0+cu128, rfdetr 1.11.0, 161.9 min. Split
+  rebuilt and membership-checked on Kaggle (1,263 / 331 / 402). 11 classes — placeholder dropped
+  as expected. Batch 8 × accum 2 fit in memory.
+- **Early stopping:** best EMA val mAP@50–95 0.8293 at epoch 36, but the 0.0008 gain over
+  epoch 29 was below `min_delta` 0.001, so the patience counter ran from 29 → stopped after 39.
+  The checkpoint is still epoch 36's.
+- **Result:** test mAP@50 0.953 / mAP@50–95 0.741; val 0.993 / 0.829. Per class, 9 of 11 drop
+  0.04–0.08; **0.5 kg −0.265, 1.5 kg −0.231.**
+- **Checked, not the explanation:** ground-truth box height on test is ~0.6–0.7× val for every
+  class (portrait, uncropped). 1 kg / 2 kg shrink as much as 0.5 / 1.5 kg but barely drop.
+  **Hypothesis to test next:** the two outliers are confused with their same-colour heavy
+  partner (5 kg white, 15 kg yellow) — counts from `results/predictions_test.csv`.
+- **Broke:** `kaggle kernels output` without a filter died on a 500 MB intermediate `.ckpt`
+  (IncompleteRead). `--file-pattern checkpoint_best_total` fetched just the 128 MB model. The
+  uv-installed `kaggle` shim is broken on this machine; `uvx --from kaggle kaggle` works.
+- **Committed:** `results/` (metrics, config, val/test predictions, run record). Checkpoint kept
+  out of git in `models/kaggle-run1/` — goes to the HF Hub for the demo.
+
 ---
 
 ## Superseded design (2026-09-23) — kept for the record
@@ -156,7 +175,7 @@ layer could not survive the switch (no independent ground truth in a public data
       category that other categories name as their supercategory (`filter_parent_categories` in
       `rfdetr/datasets/coco.py`), and maps val/test labels through the train split's mapping.
       Leave the exported categories as they are; the notebook pins 1.11.0.
-- [ ] Kaggle phone verification (GPU quota) — confirm before training.
+- [x] Kaggle phone verification — done 2026-09-25; first run completed.
 - [x] How the data reaches Kaggle: rebuilt inside the notebook from the pinned export + the
       committed manifest, with the Roboflow key as a Kaggle Secret. No HF mirror (see log).
 - [ ] Ask the dataset owner who took the phone photos? Only matters if the demo goes beyond a
