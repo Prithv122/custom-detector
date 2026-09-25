@@ -264,7 +264,7 @@ def summarise(measures: list[BoxMeasure], reps: int = BOOTSTRAP_REPS) -> dict:
 def format_summary(s: dict) -> str:
     lo, hi = s["auc_ci95_cluster_bootstrap"]
     lines = [
-        f"Test {s['target']} boxes: {s['n_target_boxes']} · confidence threshold "
+        f"Test {s['target']} boxes: {s['n_target_boxes']}; confidence threshold "
         f"{s['confidence_threshold']} (Run 1's, from val)",
         "",
         "| group | measurable boxes | images | unmeasurable | ring b* median (IQR) "
@@ -285,8 +285,8 @@ def format_summary(s: dict) -> str:
     within = f"{w['auc']:.3f}" if w["auc"] is not None else "-"
     lines += [
         "",
-        f"AUC (ring b*, misread > correct): **{s['auc_misread_vs_correct']:.3f}** "
-        f"· 95% CI {lo:.3f} to {hi:.3f} (cluster bootstrap over images, "
+        f"AUC (ring b*, misread > correct): **{s['auc_misread_vs_correct']:.3f}**"
+        f"; 95% CI {lo:.3f} to {hi:.3f} (cluster bootstrap over images, "
         f"{s['bootstrap_reps']} reps, seed {s['bootstrap_seed']}, "
         f"{s['bootstrap_skipped']} skipped)",
         f"Within-image: {w['images_with_both']} photos with both groups, {w['pairs']} pairs, "
