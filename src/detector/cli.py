@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import os
 import sys
@@ -11,6 +12,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+from detector.backdrop import format_summary, measure_split, measures_to_rows, summarise
 from detector.dataset import CLASSES
 from detector.dataset.manifest import build_manifest, read_manifest, write_manifest
 from detector.dataset.prepare import download, materialize
@@ -54,6 +56,24 @@ def _cmd_evaluate(args: argparse.Namespace) -> int:
     (out / "evaluation.json").write_text(json.dumps(report, indent=2) + "\n")
     text = format_report(report)
     (out / "evaluation.md").write_text(text + "\n", encoding="utf-8")
+    print(text)
+    return 0
+
+
+def _cmd_backdrop(args: argparse.Namespace) -> int:
+    measures = measure_split(
+        Path(args.prepared) / "test", Path(args.results) / "predictions_test.csv"
+    )
+    summary = summarise(measures)
+    out = Path(args.results)
+    rows = measures_to_rows(measures)
+    with (out / "backdrop_boxes.csv").open("w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=list(rows[0]))
+        writer.writeheader()
+        writer.writerows(rows)
+    (out / "backdrop.json").write_text(json.dumps(summary, indent=2) + "\n")
+    text = format_summary(summary)
+    (out / "backdrop.md").write_text(text + "\n", encoding="utf-8")
     print(text)
     return 0
 
@@ -102,6 +122,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--prepared", default=str(PREPARED_DIR))
     p.add_argument("--results", default=str(RESULTS_DIR))
     p.set_defaults(func=_cmd_evaluate)
+
+    p = sub.add_parser("backdrop", help="Backdrop check on test 1.5 kg plates (NOTES.md)")
+    p.add_argument("--prepared", default=str(PREPARED_DIR))
+    p.add_argument("--results", default=str(RESULTS_DIR))
+    p.set_defaults(func=_cmd_backdrop)
 
     p = sub.add_parser("summary", help="Print split sizes and class coverage from the manifest")
     p.add_argument("--manifest", default=str(MANIFEST))

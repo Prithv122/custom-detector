@@ -71,17 +71,18 @@ def iou(a: Box, b: Box) -> float:
     return inter / union if union > 0 else 0.0
 
 
-def match_image(
+def assign_image(
     gt: list[tuple[str, Box]], preds: list[Detection], threshold: float
-) -> list[tuple[str, str]]:
-    """Class-agnostic greedy matching for one image → (true class, predicted class) pairs.
+) -> tuple[list[str], list[str]]:
+    """Class-agnostic greedy matching for one image.
 
-    Unmatched ground truth comes back as (cls, MISSED); unmatched predictions as
-    (BACKGROUND, cls).
+    Returns (the predicted class for each ground-truth box, in ``gt`` order, or MISSED;
+    the classes of predictions left unmatched).
     """
     kept = sorted((p for p in preds if p.confidence >= threshold), key=lambda p: -p.confidence)
     free = set(range(len(gt)))
-    pairs: list[tuple[str, str]] = []
+    outcome = [MISSED] * len(gt)
+    background: list[str] = []
     for p in kept:
         best, best_iou = None, IOU_THRESHOLD
         for g in free:
@@ -89,11 +90,25 @@ def match_image(
             if v >= best_iou:
                 best, best_iou = g, v
         if best is None:
-            pairs.append((BACKGROUND, p.cls))
+            background.append(p.cls)
         else:
             free.remove(best)
-            pairs.append((gt[best][0], p.cls))
-    pairs.extend((gt[g][0], MISSED) for g in sorted(free))
+            outcome[best] = p.cls
+    return outcome, background
+
+
+def match_image(
+    gt: list[tuple[str, Box]], preds: list[Detection], threshold: float
+) -> list[tuple[str, str]]:
+    """(true class, predicted class) pairs for one image.
+
+    Unmatched ground truth comes back as (cls, MISSED); unmatched predictions as
+    (BACKGROUND, cls).
+    """
+    outcome, background = assign_image(gt, preds, threshold)
+    pairs = [(g[0], o) for g, o in zip(gt, outcome, strict=True) if o != MISSED]
+    pairs += [(BACKGROUND, c) for c in background]
+    pairs += [(g[0], o) for g, o in zip(gt, outcome, strict=True) if o == MISSED]
     return pairs
 
 
