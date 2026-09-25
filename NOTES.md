@@ -292,6 +292,36 @@ Programmatic over all 2,251 images; model vision only on 28 flagged or sampled i
 - **Bug fixed on the way:** `evaluate` crashed printing `→` on a Windows cp1252 console after
   the files were written. Report text is ASCII now.
 
+### 2026-09-25 — backdrop check run (protocol committed first, `3b89165`)
+- **Order in history:** protocol `3b89165` → code + synthetic tests `c72e7f5` → one run,
+  output committed unedited `e11edfe`. `uv run custom-detector backdrop` reproduces it.
+- **Pre-registered verdict: for.** AUC 0.715, cluster-bootstrap 95% CI 0.574–0.848 (0 resamples
+  skipped). It only just clears the bar (≥ 0.70, lower bound > 0.55). Ring b\* median:
+  misread 45.2 (IQR 43.0–47.4) vs correct −4.7 (IQR −12.4 to 48.3). No box was unmeasurable.
+- **Protocol slip, no effect on the answer:** the question said 97 test 1.5 kg boxes. There
+  are 100. The other 3 are other-class confusions, which the protocol already puts outside the
+  M-vs-C comparison.
+- **The within-image control was empty.** Every test photo holds exactly one 1.5 kg plate, so
+  there are no same-photo M/C pairs, and backdrop can't be separated from "this photo". That
+  could have been checked from the labels alone before pre-registering. Lesson: count the
+  boxes per cluster before designing a within-cluster control.
+- **Exploratory (cut-off picked after seeing the IQRs, so not evidence at the protocol's
+  level):** with "yellow backdrop" = ring b\* > 30, all 40 misreads are on yellow. Plates on
+  yellow: 12 correct / 40 misread / 15 missed. Plates on anything else: 24 / 0 / 6. The AUC
+  understates this because the correct group is bimodal: a third of the correctly read plates
+  are on yellow too. The hours overlap (misread 19–21 h, correct 18–21 h), so it isn't simply
+  one block of the evening. Yellow backdrop looks close to *necessary* for the misread, but
+  not sufficient.
+- **Secondary, plate chroma C\*:** misread 38.9 vs correct 41.9 (IQRs overlap). So "pale"
+  holds only weakly.
+- **What it means:** an association on one date, not a cause (see the protocol's caveat). Run 2
+  now has a named failure mode. Before training, two cheaper options to weigh:
+  (a) **test-time intervention:** recolour only the ring pixels of misread plates (yellow → the
+  dark blue) and re-run inference with the Run 1 checkpoint on CPU. If the reads flip to
+  1.5 kg, that's causal evidence with no training at all. (b) Run 2 with hue/saturation
+  augmentation, success criterion written first: test 1.5 kg recall on yellow-backdrop plates
+  and 0.5 kg precision, with no other class losing more than its Run 1 CI.
+
 ---
 
 ## Superseded design (2026-09-23) — kept for the record

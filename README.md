@@ -138,11 +138,28 @@ reproduces everything below into `results/evaluation.md` / `.json`.
 - Every other class keeps recall ≥ 0.83 on test; the one other val weakness (22 of 118 2 kg
   → 1 kg) does not recur on test.
 
-**Open, not yet measured:** looking at a handful of crops (exploratory, not part of the
-protocol), the misread 1.5 kg plates look pale and mostly sit in front of the test date's
-yellow-green backdrop, and some train-set 1.5 kg / 0.5 kg plates already overlap in colour.
-Whether the backdrop drives the error is the next check, with its rule written down first.
-No second training run until that has an answer.
+### Backdrop check — misread plates sit in front of the yellow backdrop
+
+Looking at crops suggested that the misread 1.5 kg plates sit in front of the test date's
+yellow-green backdrop. The measurement, the summary and a for / against / inconclusive rule
+were committed before any pixel was measured (NOTES.md, *Backdrop check*).
+`uv run custom-detector backdrop` reproduces it into `results/backdrop.md` / `.json`, and the
+per-box values go to `results/backdrop_boxes.csv`.
+
+- **Measure:** median CIELAB b\* (blue −, yellow +) of a ring around each test 1.5 kg box.
+  All labelled boxes are masked out, so neighbouring plates don't count as background.
+- **Result: pre-registered verdict *for*.** AUC 0.715 (95% CI 0.574–0.848, bootstrap over
+  whole images) that a misread plate has a yellower backdrop than a correctly read one. Ring
+  b\* median: misread **45.2** (IQR 43.0–47.4), correct **−4.7** (IQR −12.4 to 48.3).
+- **Exploratory, cut-off chosen afterwards:** all 40 misreads have a yellow backdrop
+  (b\* > 30). On yellow, 12 plates are read correctly, 40 are misread and 15 are missed.
+  Against any other backdrop the counts are 24, 0 and 6. A yellow backdrop is close to
+  necessary for the error, but it doesn't guarantee it.
+- **Limits:** one date, one run, association only. Each test photo holds a single 1.5 kg
+  plate, so the planned same-photo control had no pairs, and backdrop can't be separated
+  from everything else about a photo. The cheapest causal test is to recolour the backdrop
+  around misread plates and re-run inference. That hasn't been run yet, and neither has a
+  second training run.
 
 Val is optimistic by design: it shares capture dates with train. The test gap is the number
 that describes a new day.
