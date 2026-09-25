@@ -191,6 +191,30 @@ Programmatic over all 2,251 images; model vision only on 28 flagged or sampled i
 - **Committed:** `results/` (metrics, config, val/test predictions, run record). Checkpoint kept
   out of git in `models/kaggle-run1/` — goes to the HF Hub for the demo.
 
+### 2026-09-25 — Run 1 evaluated (protocol committed first, `23b6c55`)
+- **Order in history:** protocol `23b6c55` → code + fixture tests `aab14e3` → numbers.
+- **Cross-check passed:** recomputed mAP@50 val 0.993 / test 0.954 vs rfdetr 0.993 / 0.953.
+  Predictions file and coordinates are trustworthy.
+- **Threshold 0.80** on val (micro-F1 0.978).
+- **Pre-registered verdict: mixed.** Plain reading: **hypothesis wrong.** Partner confusion
+  1/100 for 1.5 kg, 0/103 for 0.5 kg, zero everywhere on val. "Mixed" rather than "rejected"
+  only because 0.5 kg has no errors of its own — the rule didn't anticipate a class whose AP
+  drop is entirely *other classes' boxes landing on it*. Lesson: a decision rule written over
+  recall-side errors can't see a precision-side failure. Next rule should cover both.
+- **What actually happens:** test 1.5 kg → 0.5 kg ×40, missed ×21, correct ×36. 0.5 kg recall
+  1.00, precision 0.715. One error, two AP drops. Size-neighbour, cross-colour confusion.
+- Also: val 2 kg → 1 kg ×22 (does not recur on test); 25 kg → 15/20 kg ×6 on test.
+- **Exploratory (8 crops per group, model vision):** misread test 1.5 kg plates look pale/olive,
+  mostly against the yellow-green backdrop; correctly read ones are saturated yellow, half on
+  the dark-blue backdrop. Train 1.5 kg includes pale/cream plates; train 0.5 kg includes beige
+  ones — colour already overlaps in training. Crop sheet not committed (unverified
+  photographer, same reason as no dataset mirror).
+- **Next check (write the rule first):** does the backdrop behind a 1.5 kg plate predict whether
+  it is misread? Needs a per-box background measure (e.g. mean hue of a ring around the box)
+  and a threshold fixed before counting.
+- **Bug fixed on the way:** `evaluate` crashed printing `→` on a Windows cp1252 console after
+  the files were written. Report text is ASCII now.
+
 ---
 
 ## Superseded design (2026-09-23) — kept for the record

@@ -119,17 +119,33 @@ Per-class AP (@50–95):
 | 0.5 kg | 0.782 | **0.516** | **−0.265** |
 | collar (`zacisk`) | 0.864 | 0.826 | −0.038 |
 
-What this does and doesn't show so far:
+### Error analysis — one failure, two symptoms
 
-- Nine of the eleven classes lose about 0.04–0.08 AP on the new day. **0.5 kg and 1.5 kg lose
-  four to five times that.**
-- Plates are smaller in the frame on the test date (portrait, uncropped): median box height
-  drops from 0.23 to 0.16 of the image for small plates, and from 0.55 to 0.35 for 25 kg.
-  But 1 kg and 2 kg shrink just as much and only lose ~0.05, so **size alone doesn't explain
-  the two outliers.** Both share a colour with a heavier plate (0.5 / 5 kg white, 1.5 / 15 kg
-  yellow), which is what the same-colour confusion analysis will test. Not yet measured.
-- Val is optimistic by design: it shares capture dates with train. The test gap is the number
-  that describes a new day.
+The matching rules, the threshold rule and a decision rule were committed before any confusion
+was counted (NOTES.md, *Evaluation protocol for Run 1*). `uv run custom-detector evaluate`
+reproduces everything below into `results/evaluation.md` / `.json`.
+
+- **Cross-check:** mAP@50 recomputed from the saved predictions is 0.954 on test (rfdetr: 0.953).
+- **Threshold:** confidence 0.80, chosen on val (micro-F1 0.978), used unchanged on test.
+- **The finding:** on the test date, **40 of 100 1.5 kg plates are labelled 0.5 kg**, and 21
+  more are missed (recall 0.36). 0.5 kg itself has recall 1.00, but precision 0.715 — it is
+  absorbing the 1.5 kg plates. The two weak classes are one error seen from both sides.
+- **The hypothesis I pre-registered was wrong.** Same-colour confusion is essentially absent:
+  1 of 100 (1.5 → 15 kg), 0 of 103 (0.5 → 5 kg); zero on val. The decision rule returns
+  *mixed* (0.5 kg has no errors of its own to classify); the plain reading is that colour
+  twins are not the problem. The confusion is between **size neighbours of different colour**
+  (yellow 1.5 kg → white 0.5 kg).
+- Every other class keeps recall ≥ 0.83 on test; the one other val weakness (22 of 118 2 kg
+  → 1 kg) does not recur on test.
+
+**Open, not yet measured:** looking at a handful of crops (exploratory, not part of the
+protocol), the misread 1.5 kg plates look pale and mostly sit in front of the test date's
+yellow-green backdrop, and some train-set 1.5 kg / 0.5 kg plates already overlap in colour.
+Whether the backdrop drives the error is the next check, with its rule written down first.
+No second training run until that has an answer.
+
+Val is optimistic by design: it shares capture dates with train. The test gap is the number
+that describes a new day.
 
 Roboflow's hosted model for this dataset reports mAP@50 52%, but on the leaky split, so it is
 not a comparable baseline.

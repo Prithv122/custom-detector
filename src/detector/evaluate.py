@@ -289,10 +289,10 @@ def format_report(report: dict) -> str:
         ]
         for c in CLASSES:
             e, pc = report[s]["errors"][c], report[s]["per_class"][c]
-            partner = f"→{e['partner_class']} {e['partner']}" if e["partner_class"] else "—"
+            partner = f"-> {e['partner_class']} {e['partner']}" if e["partner_class"] else "-"
             lo, hi = e["partner_ci95"]
             share = (
-                f"{e['partner_share']:.1%} ({lo:.1%} to {hi:.1%})" if e["partner_class"] else "—"
+                f"{e['partner_share']:.1%} ({lo:.1%} to {hi:.1%})" if e["partner_class"] else "-"
             )
             lines.append(
                 f"| {c} | {e['n_gt']} | {e['correct']} | {partner} | {e['other']} | "

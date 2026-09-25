@@ -1,0 +1,509 @@
+{
+  "protocol": "NOTES.md \u2014 Evaluation protocol for Run 1",
+  "iou_threshold": 0.5,
+  "confidence_threshold": 0.8,
+  "val_micro_f1_at_threshold": 0.9775753328661527,
+  "val": {
+    "ap50_recomputed": {
+      "0.5kg": 1.0,
+      "1kg": 0.9618830785310408,
+      "1.5kg": 1.0,
+      "2kg": 0.9769529971329024,
+      "2.5kg": 0.9946282195396059,
+      "5kg": 0.9939886845827439,
+      "10kg": 1.0,
+      "15kg": 1.0,
+      "20kg": 1.0,
+      "25kg": 1.0,
+      "zacisk": 0.9987436810146271
+    },
+    "micro_f1": 0.9775753328661527,
+    "per_class": {
+      "0.5kg": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "n_gt": 60,
+        "n_pred": 60
+      },
+      "1kg": {
+        "precision": 0.7608695652173914,
+        "recall": 1.0,
+        "n_gt": 70,
+        "n_pred": 92
+      },
+      "1.5kg": {
+        "precision": 1.0,
+        "recall": 0.9863013698630136,
+        "n_gt": 73,
+        "n_pred": 72
+      },
+      "2kg": {
+        "precision": 0.9891304347826086,
+        "recall": 0.7711864406779662,
+        "n_gt": 118,
+        "n_pred": 92
+      },
+      "2.5kg": {
+        "precision": 0.991869918699187,
+        "recall": 0.9959183673469387,
+        "n_gt": 245,
+        "n_pred": 246
+      },
+      "5kg": {
+        "precision": 0.9925373134328358,
+        "recall": 0.9568345323741008,
+        "n_gt": 139,
+        "n_pred": 134
+      },
+      "10kg": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "n_gt": 46,
+        "n_pred": 46
+      },
+      "15kg": {
+        "precision": 1.0,
+        "recall": 0.9775280898876404,
+        "n_gt": 89,
+        "n_pred": 87
+      },
+      "20kg": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "n_gt": 59,
+        "n_pred": 59
+      },
+      "25kg": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "n_gt": 203,
+        "n_pred": 203
+      },
+      "zacisk": {
+        "precision": 0.9969788519637462,
+        "recall": 1.0,
+        "n_gt": 330,
+        "n_pred": 331
+      }
+    },
+    "errors": {
+      "0.5kg": {
+        "partner_class": "5kg",
+        "n_gt": 60,
+        "correct": 60,
+        "partner": 0,
+        "missed": 0,
+        "other": 0,
+        "partner_share": 0.0,
+        "partner_ci95": [
+          0.0,
+          0.06017393047793289
+        ],
+        "confused_as": {}
+      },
+      "1kg": {
+        "partner_class": "10kg",
+        "n_gt": 70,
+        "correct": 70,
+        "partner": 0,
+        "missed": 0,
+        "other": 0,
+        "partner_share": 0.0,
+        "partner_ci95": [
+          0.0,
+          0.05202487486728348
+        ],
+        "confused_as": {}
+      },
+      "1.5kg": {
+        "partner_class": "15kg",
+        "n_gt": 73,
+        "correct": 72,
+        "partner": 0,
+        "missed": 1,
+        "other": 0,
+        "partner_share": 0.0,
+        "partner_ci95": [
+          0.0,
+          0.04999375338358389
+        ],
+        "confused_as": {}
+      },
+      "2kg": {
+        "partner_class": "20kg",
+        "n_gt": 118,
+        "correct": 91,
+        "partner": 0,
+        "missed": 5,
+        "other": 22,
+        "partner_share": 0.0,
+        "partner_ci95": [
+          0.0,
+          0.03152946120208532
+        ],
+        "confused_as": {
+          "1kg": 22
+        }
+      },
+      "2.5kg": {
+        "partner_class": "25kg",
+        "n_gt": 245,
+        "correct": 244,
+        "partner": 0,
+        "missed": 1,
+        "other": 0,
+        "partner_share": 0.0,
+        "partner_ci95": [
+          0.0,
+          0.01543793320730939
+        ],
+        "confused_as": {}
+      },
+      "5kg": {
+        "partner_class": "0.5kg",
+        "n_gt": 139,
+        "correct": 133,
+        "partner": 0,
+        "missed": 6,
+        "other": 0,
+        "partner_share": 0.0,
+        "partner_ci95": [
+          0.0,
+          0.026894126080917603
+        ],
+        "confused_as": {}
+      },
+      "10kg": {
+        "partner_class": "1kg",
+        "n_gt": 46,
+        "correct": 46,
+        "partner": 0,
+        "missed": 0,
+        "other": 0,
+        "partner_share": 0.0,
+        "partner_ci95": [
+          0.0,
+          0.07707617732978073
+        ],
+        "confused_as": {}
+      },
+      "15kg": {
+        "partner_class": "1.5kg",
+        "n_gt": 89,
+        "correct": 87,
+        "partner": 0,
+        "missed": 2,
+        "other": 0,
+        "partner_share": 0.0,
+        "partner_ci95": [
+          0.0,
+          0.04137800296418846
+        ],
+        "confused_as": {}
+      },
+      "20kg": {
+        "partner_class": "2kg",
+        "n_gt": 59,
+        "correct": 59,
+        "partner": 0,
+        "missed": 0,
+        "other": 0,
+        "partner_share": 0.0,
+        "partner_ci95": [
+          0.0,
+          0.061131479784092065
+        ],
+        "confused_as": {}
+      },
+      "25kg": {
+        "partner_class": "2.5kg",
+        "n_gt": 203,
+        "correct": 203,
+        "partner": 0,
+        "missed": 0,
+        "other": 0,
+        "partner_share": 0.0,
+        "partner_ci95": [
+          1.734723475976807e-18,
+          0.01857266623348494
+        ],
+        "confused_as": {}
+      },
+      "zacisk": {
+        "partner_class": null,
+        "n_gt": 330,
+        "correct": 330,
+        "partner": 0,
+        "missed": 0,
+        "other": 0,
+        "partner_share": 0.0,
+        "partner_ci95": [
+          0.0,
+          0.011507253739498012
+        ],
+        "confused_as": {}
+      }
+    },
+    "background_predictions": 5,
+    "map50_recomputed": 0.9932906055273564
+  },
+  "test": {
+    "ap50_recomputed": {
+      "0.5kg": 0.7647182786388793,
+      "1kg": 0.9876263127620521,
+      "1.5kg": 0.831836221562681,
+      "2kg": 0.9982576653135936,
+      "2.5kg": 0.9960754299114122,
+      "5kg": 0.9778382652345144,
+      "10kg": 0.9992980012692138,
+      "15kg": 0.9758888388838883,
+      "20kg": 0.9825823917436673,
+      "25kg": 0.9855055473254537,
+      "zacisk": 0.9989420859894209
+    },
+    "micro_f1": 0.9518413597733711,
+    "per_class": {
+      "0.5kg": {
+        "precision": 0.7152777777777778,
+        "recall": 1.0,
+        "n_gt": 103,
+        "n_pred": 144
+      },
+      "1kg": {
+        "precision": 0.9770114942528736,
+        "recall": 0.9444444444444444,
+        "n_gt": 90,
+        "n_pred": 87
+      },
+      "1.5kg": {
+        "precision": 1.0,
+        "recall": 0.36,
+        "n_gt": 100,
+        "n_pred": 36
+      },
+      "2kg": {
+        "precision": 1.0,
+        "recall": 0.8295454545454546,
+        "n_gt": 88,
+        "n_pred": 73
+      },
+      "2.5kg": {
+        "precision": 1.0,
+        "recall": 0.9700272479564033,
+        "n_gt": 367,
+        "n_pred": 356
+      },
+      "5kg": {
+        "precision": 1.0,
+        "recall": 0.8795180722891566,
+        "n_gt": 83,
+        "n_pred": 73
+      },
+      "10kg": {
+        "precision": 1.0,
+        "recall": 0.8861788617886179,
+        "n_gt": 123,
+        "n_pred": 109
+      },
+      "15kg": {
+        "precision": 0.9384615384615385,
+        "recall": 0.8714285714285714,
+        "n_gt": 70,
+        "n_pred": 65
+      },
+      "20kg": {
+        "precision": 0.9583333333333334,
+        "recall": 1.0,
+        "n_gt": 92,
+        "n_pred": 96
+      },
+      "25kg": {
+        "precision": 1.0,
+        "recall": 0.9860834990059643,
+        "n_gt": 503,
+        "n_pred": 496
+      },
+      "zacisk": {
+        "precision": 0.9972602739726028,
+        "recall": 1.0,
+        "n_gt": 364,
+        "n_pred": 365
+      }
+    },
+    "errors": {
+      "0.5kg": {
+        "partner_class": "5kg",
+        "n_gt": 103,
+        "correct": 103,
+        "partner": 0,
+        "missed": 0,
+        "other": 0,
+        "partner_share": 0.0,
+        "partner_ci95": [
+          0.0,
+          0.03595603210734395
+        ],
+        "confused_as": {}
+      },
+      "1kg": {
+        "partner_class": "10kg",
+        "n_gt": 90,
+        "correct": 85,
+        "partner": 0,
+        "missed": 5,
+        "other": 0,
+        "partner_share": 0.0,
+        "partner_ci95": [
+          0.0,
+          0.04093706842168078
+        ],
+        "confused_as": {}
+      },
+      "1.5kg": {
+        "partner_class": "15kg",
+        "n_gt": 100,
+        "correct": 36,
+        "partner": 1,
+        "missed": 21,
+        "other": 42,
+        "partner_share": 0.01,
+        "partner_ci95": [
+          0.0017673865655472645,
+          0.0544875247609346
+        ],
+        "confused_as": {
+          "0.5kg": 40,
+          "15kg": 1,
+          "1kg": 2
+        }
+      },
+      "2kg": {
+        "partner_class": "20kg",
+        "n_gt": 88,
+        "correct": 73,
+        "partner": 0,
+        "missed": 15,
+        "other": 0,
+        "partner_share": 0.0,
+        "partner_ci95": [
+          3.469446951953614e-18,
+          0.04182853957248131
+        ],
+        "confused_as": {}
+      },
+      "2.5kg": {
+        "partner_class": "25kg",
+        "n_gt": 367,
+        "correct": 356,
+        "partner": 0,
+        "missed": 11,
+        "other": 0,
+        "partner_share": 0.0,
+        "partner_ci95": [
+          0.0,
+          0.010359139859174374
+        ],
+        "confused_as": {}
+      },
+      "5kg": {
+        "partner_class": "0.5kg",
+        "n_gt": 83,
+        "correct": 73,
+        "partner": 1,
+        "missed": 9,
+        "other": 0,
+        "partner_share": 0.012048192771084338,
+        "partner_ci95": [
+          0.0021299225877048286,
+          0.0651373778765888
+        ],
+        "confused_as": {
+          "0.5kg": 1
+        }
+      },
+      "10kg": {
+        "partner_class": "1kg",
+        "n_gt": 123,
+        "correct": 109,
+        "partner": 0,
+        "missed": 13,
+        "other": 1,
+        "partner_share": 0.0,
+        "partner_ci95": [
+          0.0,
+          0.03028659367273828
+        ],
+        "confused_as": {
+          "20kg": 1
+        }
+      },
+      "15kg": {
+        "partner_class": "1.5kg",
+        "n_gt": 70,
+        "correct": 61,
+        "partner": 0,
+        "missed": 9,
+        "other": 0,
+        "partner_share": 0.0,
+        "partner_ci95": [
+          0.0,
+          0.05202487486728348
+        ],
+        "confused_as": {}
+      },
+      "20kg": {
+        "partner_class": "2kg",
+        "n_gt": 92,
+        "correct": 92,
+        "partner": 0,
+        "missed": 0,
+        "other": 0,
+        "partner_share": 0.0,
+        "partner_ci95": [
+          0.0,
+          0.04008280329209862
+        ],
+        "confused_as": {}
+      },
+      "25kg": {
+        "partner_class": "2.5kg",
+        "n_gt": 503,
+        "correct": 496,
+        "partner": 0,
+        "missed": 0,
+        "other": 7,
+        "partner_share": 0.0,
+        "partner_ci95": [
+          0.0,
+          0.007579488345076647
+        ],
+        "confused_as": {
+          "zacisk": 1,
+          "15kg": 3,
+          "20kg": 3
+        }
+      },
+      "zacisk": {
+        "partner_class": null,
+        "n_gt": 364,
+        "correct": 364,
+        "partner": 0,
+        "missed": 0,
+        "other": 0,
+        "partner_share": 0.0,
+        "partner_ci95": [
+          0.0,
+          0.010443625734555309
+        ],
+        "confused_as": {}
+      }
+    },
+    "background_predictions": 0,
+    "map50_recomputed": 0.9544153671486161
+  },
+  "verdict": "mixed",
+  "verdict_reasons": [
+    "0.5kg: errors {'partner': 0, 'other': 0, 'missed': 0}; (a) partner largest=False, (b) above controls=False, (c) above own val share=False",
+    "1.5kg: errors {'partner': 1, 'other': 42, 'missed': 21}; (a) partner largest=False, (b) above controls=True, (c) above own val share=True"
+  ]
+}
