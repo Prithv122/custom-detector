@@ -81,6 +81,83 @@ and gets reported as such.
 **No second training run** until this is answered. A new run needs a named failure mode to
 test, not a hope of a higher score.
 
+## Backdrop check (fixed 2026-09-25, before any pixel was measured)
+
+Written after Run 1's evaluation and after looking at 8 crops per group by eye. Nothing
+below has been computed yet. Committed on its own, like the Run 1 protocol, so the order
+shows in the history.
+
+**Question.** On the test date, 40 of the 97 ground-truth 1.5 kg plates are read as 0.5 kg,
+36 are read correctly and 21 are missed. In the crops, misread plates were mostly in front of
+the yellow-green backdrop and correctly read ones were often in front of the dark-blue one.
+**Is the backdrop behind a test 1.5 kg plate yellower when the plate is misread as 0.5 kg
+than when it is read correctly?**
+
+**Boxes and outcomes.** Every test ground-truth box of class `1.5kg`. Each one's outcome comes
+from Run 1's matching exactly (class-agnostic greedy, IoU 0.5) at Run 1's confidence
+threshold **0.80**. That threshold was chosen on val and is not picked again. The two groups
+compared are **M** = matched to a `0.5kg` prediction and **C** = matched to a `1.5kg`
+prediction. Missed and other-class boxes are measured and reported, but they are not part of
+the comparison.
+
+**1. Measurement, from pixels and labels only.**
+- Pixels: the prepared test image, RGB, 8-bit. Its size must equal the COCO `width`/`height`.
+  Any mismatch stops the run: boxes and pixels would not line up.
+- Ring: the box grown by a margin `m = max(8, 0.25 × max(w, h))` px on every side, clipped to
+  the image. From that area remove **every** ground-truth box in the image (all classes,
+  including this one), so neighbouring plates and collars don't count as background. Also
+  remove pure-black pixels (0, 0, 0), which is Roboflow's padding on the 640 × 640 images.
+  What is left is the ring.
+- Colour space: CIELAB, from sRGB with the D65 white point (standard formulas, no library
+  colour management).
+- Per-box statistic (**primary**): the median **b\*** of the ring pixels. b\* runs from blue
+  (negative) to yellow (positive), so it separates the two backdrops seen in the crops, and it
+  needs no circular statistics the way hue would.
+- Too little background: a box whose ring has fewer than **150** pixels is *unmeasurable*. It
+  is counted per group and left out of the statistics.
+- **Secondary, reported but not decisive:** the median chroma C\* of the plate itself (the
+  central 60 % of the box in each dimension), for the "misread plates look pale" observation.
+  It may be a result of the backdrop (auto white balance) rather than a separate cause, so it
+  is not part of the verdict.
+
+**2. Summary over boxes.**
+- Effect size: **AUC** = P(ring b\* of an M box > ring b\* of a C box), ties counted as ½
+  (Mann–Whitney). 0.5 means the backdrop says nothing. Above 0.5 means misread plates sit in
+  front of yellower backdrops.
+- Uncertainty: boxes in one photo share one backdrop, so they are not independent. **Cluster
+  bootstrap over images:** resample the test images that hold at least one measurable M or C
+  box, with replacement, **10,000** times, seed **20260925**, and recompute AUC each time. The
+  95 % CI is the 2.5th–97.5th percentile. Resamples missing either group are skipped and
+  counted.
+- Also reported: the medians and IQRs of ring b\* for M, C and missed; box and image counts
+  per group; and a **within-image** check over photos that hold both an M and a C box (the
+  AUC over M-vs-C pairs from the same photo, and how many photos and pairs that covers). A
+  same-photo pair has the same backdrop. If misreads still happen there, the backdrop can't
+  be the whole story. This is reported and does not decide the verdict.
+
+**3. Decision rule.**
+- **Minimum n:** at least **15** measurable boxes from at least **6** distinct images in each of
+  M and C. Otherwise **inconclusive**, whatever the numbers are.
+- **For:** AUC ≥ **0.70** and CI lower bound > **0.55**.
+- **Reversed:** AUC ≤ 0.30 and CI upper bound < 0.45. The backdrop is associated with the
+  misread, but in the opposite direction. Counts as *against* the hypothesis as stated.
+- **Against:** the whole CI lies inside [0.30, 0.70], which rules out a strong effect in
+  either direction.
+- **Inconclusive:** anything else, such as a wide CI straddling 0.5, or a moderate AUC.
+
+**What each answer means.**
+- *For* gives Run 2 a named purpose: colour augmentation (hue/saturation jitter) aimed at
+  1.5 kg ↔ 0.5 kg, with its own success criterion written down before it trains.
+- *Against*, *reversed* or *inconclusive* means no Run 2. The project moves to the demo, HF
+  weights and ship. The README reports the 1.5 → 0.5 kg failure as known and unexplained.
+- Even *for* is an association on one test date, not a cause. The backdrop may stand in for
+  the part of the day, the light, or the physical plates. Only an intervention (Run 2's
+  augmentation, or recolouring the backdrop) can test the cause.
+
+**Order:** this protocol → code + synthetic-image tests → one run → numbers committed as they
+come out. Nothing above gets edited after the run. Anything learned goes in the log as a
+separate, dated entry.
+
 ## Dataset audit (2026-09-24)
 
 Programmatic over all 2,251 images; model vision only on 28 flagged or sampled images.
