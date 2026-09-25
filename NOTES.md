@@ -32,6 +32,55 @@ Replaces the own-photo design of 2026-09-23 (kept below under *Superseded design
 - Not supported by the data: small-object analysis (3% of boxes are COCO-small) and an occlusion
   breakdown (no occlusion flag in the labels).
 
+## Evaluation protocol for Run 1 (fixed 2026-09-25, before any confusion count was computed)
+
+Written after seeing the per-class AP table (that is where the hypothesis came from), and
+before matching a single prediction to a ground-truth box. Committed on its own so the order
+is in the history.
+
+**Question.** On the test date, 0.5 kg loses 0.265 AP and 1.5 kg loses 0.231, while nine other
+classes lose 0.04–0.08. Is that because they are labelled as their same-colour heavy partner
+(0.5 → 5 kg, white; 1.5 → 15 kg, yellow)?
+
+1. **Matching.** Per image, predictions at or above the confidence threshold are sorted by
+   confidence (highest first). Each one takes the still-unmatched ground-truth box with the
+   highest IoU, if that IoU is ≥ the threshold. Matching **ignores class**, since a class-aware
+   match could never see a confusion. One-to-one: a ground-truth box is matched at most once.
+   If a wrong-class box outranks a right-class box on the same plate, the wrong one wins. That
+   is the model's top answer.
+2. **IoU threshold: 0.5.** mAP@50 is 0.953, so localisation isn't the question; class is.
+3. **Outcomes.** Every ground-truth box ends as exactly one of: *correct* (matched, same class),
+   *confused as X* (matched, different class), or *missed* (unmatched). Every kept prediction
+   is exactly one of: correct, a confusion (counted against its predicted class), or
+   *background* (unmatched). Per class: precision = correct / predictions of that class,
+   recall = correct / ground truth of that class. So a confusion costs recall for the true
+   class and precision for the predicted one.
+4. **Confidence threshold.** The single value maximising micro-F1 on **val**, searched over
+   0.05–0.95 in steps of 0.01, then used unchanged on test. Test never picks a threshold.
+5. **Same-colour confusion.** A ground-truth box of class A matched to a prediction of class B,
+   where {A, B} is one of the five pairs: 25/2.5 red, 20/2 blue, 15/1.5 yellow, 10/1 green,
+   5/0.5 white. Both directions are reported separately (light → heavy, heavy → light).
+6. **Reporting.** One row per true class, on val and on test: correct / same-colour partner /
+   other class / missed, as counts and shares of that class's ground truth (each row sums to
+   100%), with Wilson 95% intervals on the partner share. About 100 test boxes per light
+   class, so the intervals are wide and are shown, not hidden.
+7. **Collar (`zacisk`).** Included in matching (a plate called a collar is an other-class
+   confusion, and vice versa), reported in its own row, part of no colour pair.
+8. **Cross-check.** Class-aware AP@50 is recomputed from the saved predictions. It should land
+   near rfdetr's 0.953. A large gap means the predictions file or its coordinates are wrong,
+   and nothing below it is trusted.
+
+**Decision rule.** The hypothesis is *supported* only if, for **both** 0.5 kg and 1.5 kg on
+test, (a) partner confusion is the largest of their three error types (partner, other class,
+missed), (b) its share is higher than the partner share of each control light plate (1 → 10,
+2 → 20, 2.5 → 25) on test, and (c) it is higher than the same class's own share on val.
+If *missed* is the largest error for both, it's **rejected**: that is a detection (recall)
+failure, which points back at scale or appearance, not colour. Anything else is **mixed**
+and gets reported as such.
+
+**No second training run** until this is answered. A new run needs a named failure mode to
+test, not a hope of a higher score.
+
 ## Dataset audit (2026-09-24)
 
 Programmatic over all 2,251 images; model vision only on 28 flagged or sampled images.
