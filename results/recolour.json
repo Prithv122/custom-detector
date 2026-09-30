@@ -1,0 +1,82 @@
+{
+  "protocol": "NOTES.md - Recolouring test",
+  "confidence_threshold": 0.8,
+  "checkpoint_sha256": "822a971f00dbddf918d6722e79e96ed675ff1fda2c47b31e4f33de50ff322da2",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "target_colours": {
+    "blue": [
+      4.4525544489976,
+      -12.071837720524444
+    ],
+    "yellow": [
+      -5.62766118808386,
+      46.345691654654075
+    ],
+    "n_blue": 24,
+    "n_yellow": 76
+  },
+  "baseline_gate": {
+    "n_checked": 76,
+    "n_dropped": 0,
+    "dropped_images": [],
+    "passed": true
+  },
+  "arms": {
+    "ring": {
+      "n": 40,
+      "successes": 2,
+      "share": 0.05,
+      "ci95": [
+        0.013820377146101098,
+        0.165041708179252
+      ],
+      "median_target_confidence_change": 0.2927938550710678,
+      "clipped_pixels_median": 0.025272635802587748
+    },
+    "sham": {
+      "n": 40,
+      "successes": 0,
+      "share": 0.0,
+      "ci95": [
+        0.0,
+        0.08762453925039232
+      ],
+      "median_target_confidence_change": 0.0,
+      "clipped_pixels_median": 0.007702450530849496
+    },
+    "whole": {
+      "n": 40,
+      "successes": 24,
+      "share": 0.6,
+      "ci95": [
+        0.445956198273935,
+        0.7365188938759863
+      ],
+      "median_target_confidence_change": 0.677757166326046,
+      "clipped_pixels_median": 0.010413579813709729
+    },
+    "reverse": {
+      "n": 19,
+      "successes": 6,
+      "share": 0.3157894736842105,
+      "ci95": [
+        0.15364171004428598,
+        0.5398998982493537
+      ],
+      "median_target_confidence_change": -0.6148561239242554,
+      "clipped_pixels_median": 0.7332089552238806
+    },
+    "keep": {
+      "n": 17,
+      "successes": 14,
+      "share": 0.8235294117647058,
+      "ci95": [
+        0.5897007098262422,
+        0.9380898628745101
+      ],
+      "median_target_confidence_change": -0.014450490474700928,
+      "clipped_pixels_median": 0.02573796713683292
+    }
+  },
+  "verdict": "for (scene)"
+}

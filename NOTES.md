@@ -424,6 +424,45 @@ Programmatic over all 2,251 images; model vision only on 28 flagged or sampled i
   augmentation, success criterion written first: test 1.5 kg recall on yellow-backdrop plates
   and 0.5 kg precision, with no other class losing more than its Run 1 CI.
 
+### 2026-09-30 — recolouring test run (protocol committed first, `41733e3`)
+- **Order in history:** protocol `41733e3` → transform + synthetic tests `89ac34e` → gate +
+  arm code + synthetic tests `c0defd5` → one run, output committed unedited. `rfdetr` pinned
+  to **1.11.0** (Run 1's own version — no version gap to explain away). Checkpoint SHA-256
+  `822a971f`; `torch 2.14.0+cpu`; `uv run custom-detector recolour` reproduces it.
+- **Baseline gate: passed, 0/76 dropped.** The local CPU pipeline reproduced Run 1's outcome
+  on every one of the 76 unaltered arm boxes before a single pixel was touched.
+- **Pre-registered verdict: for (scene).** Ring flips 2/40 (5.0%, CI 1.4–16.5%) — nowhere near
+  the ≥ 20/40 bar. Whole flips 24/40 (60.0%, CI 44.6–73.7%) — clears its ≥ 20/40 bar easily.
+  Sham flips 0/40, so this isn't pipeline noise. Recolouring the entire scene blue fixes most
+  misreads; recolouring only the ring around the plate mostly doesn't.
+- **What the ring arm actually did, not just the flip count:** 28 of the 40 ring boxes came
+  back `missed` (no detection at all), 10 stayed `0.5kg`, only 2 flipped to `1.5kg`. A local
+  colour patch right at the plate's edge isn't read as "a blue backdrop" — it reads as an
+  artifact the model doesn't recognise, so it drops the box rather than reclassifying it. The
+  whole arm also produced 16 `missed` (a whole-image colour shift is still off-distribution),
+  but 24 `1.5kg` against only 0 `0.5kg` — when it doesn't confuse the detector outright, it
+  reads the plate correctly, not merely "differently."
+- **Reverse (C-blue → yellow ring), not decisive:** 6/19 flipped to `0.5kg` (31.6%, CI
+  15.4–54.0%), 12 `missed`, 1 stayed `1.5kg`. Median ring clipping **73.3%** — most of these
+  ring pixels can't actually reach the yellow target from a dark-blue starting point within
+  the sRGB gamut, so "yellow ring" here is a best-effort, heavily clipped approximation, not a
+  clean recolour. Any reading of Reverse should note that up front.
+- **Keep (C-yellow ring → blue), not decisive:** 14/17 stayed `1.5kg` (82.4%, CI 59.0–93.8%),
+  3 `missed`. Recolouring an already-correct read's ring mostly doesn't break it.
+- **Median confidence change (secondary, IoU ≥ 0.5 to the box, any confidence):** ring +0.293,
+  whole +0.678, sham +0.000 (round trip is a genuine no-op), reverse −0.615, keep −0.014.
+  Consistent with the flip counts — Whole moves confidence up a lot, Ring a little, Reverse
+  down a lot.
+- **What it means:** the backdrop *causes* the misread with this checkpoint, but through the
+  colour of the whole scene, not through a narrow strip touching the plate — closer to the
+  camera's colour balance or overall lighting than to "what's directly behind this plate."
+  Run 2's success criterion, if it happens, should target scene-level colour augmentation
+  (global hue/saturation jitter), not an edge/context-only augmentation. Per the protocol,
+  this gives Run 2 a named purpose; also per the protocol's own limits, this is one checkpoint,
+  one test date, and Whole's own 16 `missed` boxes mean the scene-colour route isn't fully
+  reliable either. Move next to weighing Run 2 against shipping the demo with this finding
+  reported as known.
+
 ---
 
 ## Superseded design (2026-09-23) — kept for the record
