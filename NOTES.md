@@ -260,6 +260,164 @@ targets come out of the rule) → baseline gate → one run of all five arms →
 unedited. Nothing above gets edited after the run. Anything learned goes in the log as a
 separate, dated entry.
 
+## Run 2 — colour-cast augmentation (fixed 2026-10-01, before any Run 2 training)
+
+Written after the recolouring test came out *for (scene)*. Nothing has trained. While writing
+this I checked two things: how `rfdetr` 1.11.0 routes augmentation configs (its source), and
+what the chosen transform does to a synthetic neutral-grey image (numbers below). No test
+image was looked at.
+
+This replaces the draft criterion in the recolouring protocol (yellow-side 1.5 kg recall,
+0.5 kg precision, no class outside its Run 1 CI). The primary metric is now the misread count
+over all 100 test 1.5 kg boxes, because that count *is* the failure. Yellow-side counts and
+0.5 kg precision move to secondary. "Outside its Run 1 CI" needed a run-to-run variance that
+nobody has measured, so it is replaced by fixed margins against a control run.
+
+**Question.** Does training with a global colour-temperature augmentation reduce the test-date
+1.5 kg → 0.5 kg misread, without costing overall detection quality?
+
+**1. The augmentation, and why this one.**
+- The recolouring test changed the chroma (a\*, b\*) of the whole scene and kept L\*. So the
+  augmentation changes chroma, not lightness.
+- Plate colour is part of the label. 1.5 kg is yellow, 0.5 kg white, 10 kg green, and 1.5 and
+  0.5 kg are close in size, so colour is what separates them. A hue rotation would push a
+  yellow plate toward green while its label stays `1.5kg`, which teaches the model that colour
+  means nothing. **Hue/saturation jitter is rejected** for that reason.
+- A colour-temperature cast moves every pixel the same way, plate and backdrop together, the
+  way white balance or the light does. The plate's colour *relative to the scene* survives.
+  That matches the diagnosis: the colour of the whole scene, not a patch next to the plate.
+- **Chosen:** Albumentations `PlanckianJitter`, `mode="cied"` (CIE D illuminant series),
+  `temperature_limit=(4000, 15000)`, `sampling_method="uniform"`, `p=0.5`. These are all the
+  library's defaults for this mode. Nothing is tuned.
+- **Measured on neutral grey** (sRGB 128, L\* 53.6): 4000 K → b\* +39.1, L\* 56.2.
+  6500 K → b\* +0.4. 15000 K → b\* −34.8, L\* 53.0. That is a b\* span of 74, wider than the
+  ~50 between the test date's yellow ring (median b\* 45.2) and its correctly read plates
+  (−4.7). Lightness moves at most 2.6 L\*. On a synthetic random image, at most 8.2 % of
+  channel values clip.
+- **`cied` over `blackbody`:** blackbody at 3000 K raises L\* by 7.8 on the same grey and clips
+  46 % of the random image's values. That is a brightness change as much as a colour change.
+- **Not added:** brightness, contrast, value, saturation, hue, gamma, blur. One colour
+  transform, so a result can be pinned on it.
+
+**2. The confound, and why there are two runs.**
+- Run 1 used `aug_config=None`. That selects `rfdetr`'s torchvision pipeline: horizontal flip
+  (p 0.5) and resizing with `BILINEAR` + antialias. **Any non-empty `aug_config` switches to
+  the Albumentations pipeline.** The flip is the same, but resizing is cv2 `INTER_LINEAR`
+  without antialias, and `rfdetr`'s own warning says mAP may drift. Run 1 also had no seed.
+  So Run 1 vs a colour run would change three things at once: colour, resize backend, seed.
+- So there are two runs on one commit, identical except for the colour transform:
+
+| Run | `aug_config` | Role |
+|---|---|---|
+| **2C** control | `{"HorizontalFlip": {"p": 0.5}}` | Run 1's augmentation, on the Albumentations path |
+| **2A** colour | `{"HorizontalFlip": {"p": 0.5}, "PlanckianJitter": {"mode": "cied", "temperature_limit": (4000, 15000), "sampling_method": "uniform", "p": 0.5}}` | treatment |
+
+- **The primary comparison is 2A vs 2C.** Run 1 is reported next to both as a reference.
+- 2C also answers a question of its own: does the failure survive a retrain at all? Run 1 is
+  one sample.
+- Cost: about 2 × 162 T4 minutes.
+
+**3. Frozen for both runs.** Identical to Run 1 unless listed here.
+- Data: `data/manifest.csv` as committed. The split is 1,263 / 331 / 402, rebuilt and
+  membership-checked in the notebook exactly as for Run 1.
+- Model: RF-DETR-S from the COCO pretrained weights, resolution 512. `rfdetr` 1.11.0 and
+  `albumentations` 2.0.8, both pinned.
+- The notebook's `TRAIN` dict is unchanged: 50 epochs, batch 8 × accumulation 2, lr 1e-4,
+  early stopping (patience 10), `run_test=True`, per-class metrics. Every other `TrainConfig`
+  field stays at the value recorded in `results/training_config.json` (encoder lr 1.5e-4,
+  EMA, per-batch multi-scale, `scale_jitter`, `min_delta` 0.001, `best_model_metric="map"`).
+- Added in both runs: `augmentation_backend="albumentations"`, pinned so the `"cpu"`
+  auto-pick can't pick a different backend on Kaggle's image, and `seed=20261001`.
+- Hardware: Kaggle, one Tesla T4 (`CUDA_VISIBLE_DEVICES=0`), as for Run 1.
+- Outputs: `results/run2c/` and `results/run2a/`, holding the same files as Run 1
+  (val/test predictions, `metrics.csv`, `training_config.json`, `run_record.json`).
+- **Config check:** each saved `training_config.json` is compared field by field with Run 1's.
+  Any difference outside `aug_config`, `augmentation_backend`, `seed` and the paths **voids
+  that run**, whatever its numbers.
+
+**4. Checkpoint, threshold, test.**
+- Checkpoint: `checkpoint_best_total.pth`, which `rfdetr` picks on val mAP@50–95, as in Run 1.
+  Test plays no part in it.
+- Confidence threshold: each run's own, by Run 1's rule: the value that maximises micro-F1 on
+  that run's val, over 0.05–0.95 in steps of 0.01.
+- Test is scored once per run. After any test number has been seen, there is no retraining, no
+  config change and no second seed. The one allowed rerun is an infrastructure failure (a
+  crash, out of memory, a Kaggle timeout) before the run finishes, logged with its reason.
+- Both runs finish before either one's test predictions go through the evaluation.
+
+**5. Primary metric.**
+- Unit: the **100** test ground-truth 1.5 kg boxes. Each box's outcome uses Run 1's matching
+  (class-agnostic greedy, IoU 0.5) at that run's threshold. There are four possible outcomes:
+  `1.5kg`, `0.5kg`, `missed`, `other`.
+- **M** = boxes read as `0.5kg`. **K** = boxes read as `1.5kg`. For Run 1, M 40 and K 36
+  (21 missed, 3 other).
+- Paired test, since both runs see the same 100 boxes. b = boxes misread by 2C and not by 2A;
+  c = boxes misread by 2A and not by 2C. The one-sided exact McNemar test gives
+  p = P(X ≤ c) for X ~ Bin(b + c, ½).
+
+**6. Guardrails**, 2A against 2C:
+- **G1:** test mAP@50–95 (`rfdetr`'s own number, the one that gave Run 1 its 0.741):
+  2A ≥ 2C − 0.02.
+- **G2:** val mAP@50–95 of the selected checkpoint: 2A ≥ 2C − 0.02. Val shares dates with
+  train, so this checks in-distribution quality.
+- **G3:** per-class test AP@50–95 for every class except 0.5 and 1.5 kg: none falls more than
+  0.05 below 2C.
+- The margins are judgement, fixed before training, because no variance estimate exists (one
+  seed per arm). 0.02 is about 3 % of Run 1's 0.741. 0.05 is the bottom of the 0.04–0.08
+  val → test drop that 9 of 11 classes already show.
+
+**7. Decision rule**, applied in this order:
+1. **Void, the failure doesn't reproduce:** M(2C) ≤ 20. The control already halves the
+   misreads with no colour augmentation, so the Run 1 failure isn't stable across retrains.
+   That leaves no claim about colour either way. Run 1 vs 2C is reported.
+2. **Fixed:** all of
+   - (a) M(2A) ≤ ⌊M(2C) / 2⌋, i.e. at least half of the control's misreads are gone;
+   - (b) McNemar p < 0.05;
+   - (c) the misreads became correct reads, not misses: K(2A) − K(2C) ≥ ½ (M(2C) − M(2A));
+   - (d) G1, G2 and G3 all hold.
+3. **Fixed at a cost:** (a)–(c) hold, but a guardrail fails.
+4. **Displaced:** (a) and (b) hold, but (c) fails. Misreads turned into misses, the pattern
+   the recolouring test's ring arm showed (28 of 40 missed).
+5. **Not fixed:** anything else.
+
+**8. Secondary**, reported but not deciding anything:
+- M and K split by backdrop side, using Run 1's groups (`backdrop_boxes.csv`, ring b\* > 0
+  vs ≤ 0). The side belongs to the image, so it carries over to any run. If the fix is real,
+  it should show on the yellow side.
+- 0.5 kg test precision (Run 1: 0.715) and the full test confusion table for each run.
+- Test mAP@50 and the val → test gap for each run.
+- Every number above for Run 1 vs 2C: the only available measure of how much a retrain drifts.
+
+**What each answer means.**
+- *Fixed*: 2A becomes the shipped checkpoint (HF weights and the demo). The README tells the
+  whole chain: Run 1 → error analysis → association → intervention → fix.
+- *Fixed at a cost*, *displaced* or *not fixed*: Run 1 stays the shipped checkpoint. The
+  README reports Run 2 with its numbers, as a negative or mixed result.
+- *Void*: Run 1 stays. The README says the 1.5 → 0.5 kg failure didn't reproduce in a
+  retrain, so part of its size is run-to-run noise.
+
+**What this can't show.**
+- **The test date is no longer untouched.** Its errors chose the question, the backdrop check
+  and the recolouring test measured its images, and now the fix is scored on it. 2A's test
+  numbers answer "does it fix the known failure on this date", not "how well does it do on a
+  new date". The README must say so. A clean generalisation number needs a date nobody has
+  looked at, and this dataset has none left.
+- One seed per arm. McNemar covers which boxes happen to be in the test set, not training
+  randomness. 2C vs Run 1 is the only look at the second.
+- The augmentation simulates the colour of the light. A fix supports "robustness to scene
+  colour helps". It doesn't show that white balance or illumination was the real cause on
+  2025-05-04. The recolouring test's caveat stands.
+- `PlanckianJitter` changes plate and backdrop together. The recolouring test changed only
+  what surrounds the plate. The augmentation is the realistic intervention and the recolour
+  the controlled one, and they are not the same experiment.
+
+**Order:** this protocol → the notebook change (a 2C/2A switch; pinned backend, seed and
+`albumentations`; the config check), plus a local test that both `aug_config`s build through
+`rfdetr` and that 2A's transform leaves boxes alone and moves chroma more than lightness on a
+synthetic image → both Kaggle runs on one commit → evaluation of both, output committed
+unedited. Nothing above gets edited once training starts. Anything learned goes in the log as
+a separate, dated entry.
+
 ## Dataset audit (2026-09-24)
 
 Programmatic over all 2,251 images; model vision only on 28 flagged or sampled images.
