@@ -18,12 +18,16 @@ from detector.dataset.manifest import build_manifest, read_manifest, write_manif
 from detector.dataset.prepare import download, materialize
 from detector.dataset.split import assign_splits, cross_split_near_duplicates
 from detector.evaluate import evaluate, format_report
+from detector.recolour_run import arm_rows
+from detector.recolour_run import format_summary as format_recolour_summary
+from detector.recolour_run import run as run_recolour
 
 DATA_DIR = Path(__file__).resolve().parents[2] / "data"
 EXPORT_DIR = DATA_DIR / "raw" / "projektciezary_v10_coco"
 MANIFEST = DATA_DIR / "manifest.csv"
 PREPARED_DIR = DATA_DIR / "processed" / "plates_v10_clean"
 RESULTS_DIR = DATA_DIR.parent / "results"
+CHECKPOINT = DATA_DIR.parent / "models" / "kaggle-run1" / "run" / "checkpoint_best_total.pth"
 
 
 def _cmd_download(args: argparse.Namespace) -> int:
@@ -78,6 +82,24 @@ def _cmd_backdrop(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_recolour(args: argparse.Namespace) -> int:
+    report, arm_outcomes = run_recolour(
+        Path(args.prepared), Path(args.results), Path(args.checkpoint)
+    )
+    out = Path(args.results)
+    (out / "recolour.json").write_text(json.dumps(report, indent=2) + "\n")
+    text = format_recolour_summary(report)
+    (out / "recolour.md").write_text(text + "\n", encoding="utf-8")
+    if arm_outcomes:
+        rows = arm_rows(arm_outcomes)
+        with (out / "recolour_boxes.csv").open("w", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=list(rows[0]))
+            writer.writeheader()
+            writer.writerows(rows)
+    print(text)
+    return 0
+
+
 def _cmd_summary(args: argparse.Namespace) -> int:
     return _summary(read_manifest(Path(args.manifest)))
 
@@ -127,6 +149,12 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--prepared", default=str(PREPARED_DIR))
     p.add_argument("--results", default=str(RESULTS_DIR))
     p.set_defaults(func=_cmd_backdrop)
+
+    p = sub.add_parser("recolour", help="Baseline gate + the five-arm recolouring test (NOTES.md)")
+    p.add_argument("--prepared", default=str(PREPARED_DIR))
+    p.add_argument("--results", default=str(RESULTS_DIR))
+    p.add_argument("--checkpoint", default=str(CHECKPOINT))
+    p.set_defaults(func=_cmd_recolour)
 
     p = sub.add_parser("summary", help="Print split sizes and class coverage from the manifest")
     p.add_argument("--manifest", default=str(MANIFEST))
