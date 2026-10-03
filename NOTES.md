@@ -652,6 +652,33 @@ Programmatic over all 2,251 images; model vision only on 28 flagged or sampled i
   results are not looked at before 2A is launched. The Run 2 evaluator is written and
   committed before either run's outputs are opened.
 
+### 2026-10-04 — Run 2 evaluator written before any Run 2 output exists
+- **What:** `src/detector/run2_eval.py`, run as `custom-detector run2-eval`. It implements
+  sections 4-8 of the Run 2 protocol and nothing else: per-run threshold by Run 1's rule,
+  the outcome of each of the 100 test 1.5 kg boxes (`1.5kg`, `0.5kg`, `missed`, `other`), M
+  and K, the paired one-sided exact McNemar test, G1-G3, the decision rule in its stated
+  order (void, fixed, fixed at a cost, displaced, not fixed), and the secondary tables.
+  Tests cover every state on synthetic predictions, the boundaries of every criterion, and
+  the refusal cases below. No Run 2 file has been opened.
+- **Run 1 through the same code.** Scored by this evaluator, Run 1 gives threshold 0.80, K 36,
+  M 40, missed 21, other 3, 0.5 kg precision 0.715, test mAP@50-95 0.741, with all 40
+  misreads on the yellow side. These match the numbers recorded before Run 2 existed, and the
+  evaluator re-checks this on every run and refuses to score if it ever stops being true.
+- **Two readings the protocol left open, fixed now.** (1) G2's "val mAP@50-95 of the selected
+  checkpoint" is the best value over epochs of `val/mAP_50_95` and `val/ema_mAP_50_95`, since
+  `rfdetr` selects `checkpoint_best_total` on that metric. For Run 1 that is 0.8293 at epoch
+  36. (2) A guardrail holds when the drop equals its margin exactly (-0.02 for G1 and G2, -0.05
+  for G3). `test/AP/<class>` in `metrics.csv` is AP@50-95 (its mean over the 11 classes equals
+  `test/mAP_50_95`), so G3 uses it directly.
+- **Refusals, so the rule cannot run on the wrong thing.** Nothing is scored unless both arms'
+  five files are present. A run whose saved config differs from Run 1's outside the allowed
+  fields, whose record names another arm or a failed notebook check, or whose two records
+  differ in commit, `rfdetr` or `albumentations` version, split sizes, GPU or prediction
+  threshold, gets the verdict `invalid` (numbers still shown, no decision). The test set
+  must hold exactly 100 1.5 kg boxes.
+- **Order from here:** launch 2C, then 2A, both at `4b09e46`; download both; run
+  `custom-detector run2-eval`; commit the output unedited; accept the verdict it gives.
+
 ---
 
 ## Superseded design (2026-09-23) — kept for the record
