@@ -621,6 +621,37 @@ Programmatic over all 2,251 images; model vision only on 28 flagged or sampled i
   reliable either. Move next to weighing Run 2 against shipping the demo with this finding
   reported as known.
 
+### 2026-10-04 — Run 2 notebook switch built (protocol `93f0e22`, implementation `4b09e46`, nothing trained)
+- **What was built:** `src/detector/run2.py` (the two arms, a strict transform build, the config
+  check), the notebook's `RUN = "2C" | "2A"` switch, and `tests/test_run2.py`. No protocol text
+  changed. Two findings from building it are recorded here as reproducibility facts, not as
+  anything learned from a result: no Run 2 number exists yet.
+- **`rfdetr` 1.11.0 builds user augmentation leniently.** A transform it cannot build (a
+  misspelt name, a bad parameter) is logged as a warning and skipped, and training goes ahead.
+  A typo in `PlanckianJitter` would therefore have trained a second control and looked
+  normal. The arm's transforms are now built with `strict=True` and checked by name before
+  training, and a test shows a misspelt transform raises. The same
+  call with `strict=False` returns the surviving transforms without an error.
+- **`albumentations` is not installed by `rfdetr[train]`.** It sits in the separate `augment`
+  extra. Run 1's install (`rfdetr[train]`) therefore had no `albumentations`, so its
+  `augmentation_backend="cpu"` setting resolved to torchvision, which is what the protocol's
+  confound argument assumed. Both Run 2 arms install `albumentations==2.0.8` explicitly,
+  assert the installed version, and pin `augmentation_backend="albumentations"`. The pin is
+  also in the dev dependency group, so CI exercises the same tests.
+- **Config check, as implemented.** Against Run 1's saved `training_config.json`, everything
+  must match except `aug_config`, `augmentation_backend`, `seed`, `dataset_dir`, `output_dir`
+  and the directory part of `model_config.pretrain_weights`. The weights file name must still
+  match. The cache directory is a property of the Kaggle image, not of the experiment, so a
+  different one does not void a run. The check runs before training on the planned config and
+  again on the saved one, and the result is stored in `run_record.json`.
+- **Local test result:** both arms build through `rfdetr` and take the Albumentations
+  training path; on a neutral grey image `PlanckianJitter` leaves boxes and labels untouched,
+  moves L\* by at most 2.2 and chroma by up to 34.9 (mean 20.4 against 0.7 for L\*) over 60
+  draws, in line with the protocol's earlier measurement.
+- **Launch discipline.** Both arms run on one pinned commit SHA, 2C first, then 2A. 2C's test
+  results are not looked at before 2A is launched. The Run 2 evaluator is written and
+  committed before either run's outputs are opened.
+
 ---
 
 ## Superseded design (2026-09-23) — kept for the record
