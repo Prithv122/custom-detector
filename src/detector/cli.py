@@ -21,6 +21,8 @@ from detector.evaluate import evaluate, format_report
 from detector.recolour_run import arm_rows
 from detector.recolour_run import format_summary as format_recolour_summary
 from detector.recolour_run import run as run_recolour
+from detector.run2_eval import evaluate_run2
+from detector.run2_eval import format_report as format_run2_report
 
 DATA_DIR = Path(__file__).resolve().parents[2] / "data"
 EXPORT_DIR = DATA_DIR / "raw" / "projektciezary_v10_coco"
@@ -60,6 +62,16 @@ def _cmd_evaluate(args: argparse.Namespace) -> int:
     (out / "evaluation.json").write_text(json.dumps(report, indent=2) + "\n")
     text = format_report(report)
     (out / "evaluation.md").write_text(text + "\n", encoding="utf-8")
+    print(text)
+    return 0
+
+
+def _cmd_run2_eval(args: argparse.Namespace) -> int:
+    report = evaluate_run2(Path(args.prepared), Path(args.results))
+    out = Path(args.results)
+    (out / "run2_evaluation.json").write_text(json.dumps(report, indent=2) + "\n")
+    text = format_run2_report(report)
+    (out / "run2_evaluation.md").write_text(text + "\n", encoding="utf-8")
     print(text)
     return 0
 
@@ -144,6 +156,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--prepared", default=str(PREPARED_DIR))
     p.add_argument("--results", default=str(RESULTS_DIR))
     p.set_defaults(func=_cmd_evaluate)
+
+    p = sub.add_parser("run2-eval", help="Score Run 2: 2C vs 2A, per the NOTES.md protocol")
+    p.add_argument("--prepared", default=str(PREPARED_DIR))
+    p.add_argument("--results", default=str(RESULTS_DIR))
+    p.set_defaults(func=_cmd_run2_eval)
 
     p = sub.add_parser("backdrop", help="Backdrop check on test 1.5 kg plates (NOTES.md)")
     p.add_argument("--prepared", default=str(PREPARED_DIR))
