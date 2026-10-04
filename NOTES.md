@@ -679,6 +679,84 @@ Programmatic over all 2,251 images; model vision only on 28 flagged or sampled i
 - **Order from here:** launch 2C, then 2A, both at `4b09e46`; download both; run
   `custom-detector run2-eval`; commit the output unedited; accept the verdict it gives.
 
+### 2026-10-04 — Run 2 result: verdict *fixed* (raw outputs and evaluator output `26864ee`, unedited)
+- **Order in history:** protocol `93f0e22` → notebook switch `4b09e46` → evaluator `b89c36e` →
+  both arms trained on `4b09e46`, outputs committed unedited as `26864ee`. The verdict below is
+  the one `results/run2_evaluation.json` printed. Nothing about it was chosen after the numbers.
+- **Validity.** Config check ok for both arms (nothing differs from Run 1 outside `aug_config`,
+  `augmentation_backend`, `seed` and paths). Same commit, `rfdetr` 1.11.0, `albumentations`
+  2.0.8, Tesla T4, split 1,263 / 331 / 402 for both. `invalid_reasons` is empty. One fact the
+  config check does not cover: both Run 2 arms trained on `torch 2.11.0+cu128`, Run 1 on
+  `2.10.0+cu128`. It cannot affect 2A vs 2C (same on both sides). It is one more reason to treat
+  Run 1 as a reference and not as a third arm. Training took 125.6 min (2C) and 137.2 min (2A);
+  best val epoch 18 and 21 (Run 1: 36).
+- **Primary result, the 100 test 1.5 kg boxes** (each run at its own val-chosen threshold):
+
+  | run | threshold | read 1.5 kg (K) | read 0.5 kg (M) | missed | other |
+  |---|--:|--:|--:|--:|--:|
+  | Run 1 (reference) | 0.80 | 36 | 40 | 21 | 3 |
+  | 2C control | 0.67 | 40 | 51 | 6 | 3 |
+  | 2A colour | 0.53 | 72 | 25 | 0 | 3 |
+
+- **Decision rule, in the order written.**
+  - *Void* needed M(2C) ≤ 20. M(2C) is 51, so the failure reproduced in a retrain. Not void.
+  - (a) M(2A) ≤ ⌊51 / 2⌋ = 25: **25. Holds with zero slack.** One more misread in 2A and (a)
+    fails, the rule falls through to *not fixed*. The count went 51 → 25, so 26 of 51 (51%)
+    are gone.
+  - (b) McNemar, 2A vs 2C: b = 26 boxes misread by 2C only, c = 0 misread by 2A only,
+    one-sided exact p = 0.5^26 = 1.5e-8. Every box 2A still misreads, 2C misreads too.
+  - (c) K(2A) − K(2C) = 32 ≥ (51 − 25) / 2 = 13. The misreads became correct reads: 2A has 0
+    missed (2C 6), so this is not the *displaced* pattern.
+  - (d) G1 test mAP@50–95 0.762 vs 0.748 (margin −0.02); G2 val 0.821 vs 0.823 (margin −0.02);
+    G3 no class below 2C by more than 0.05, the largest drop is 2 kg at 0.011. All hold.
+  - **Verdict: fixed.** Consequence per the protocol: 2A is the shipped checkpoint.
+- **Secondary (decides nothing).** All numbers from `run2_evaluation.json`.
+  - By backdrop side (Run 1's groups): yellow side, M 51 → 25, K 17 → 49, missed 6 → 0. Blue
+    side, M 0 → 0 and K 23 → 23. The change sits where the diagnosis said it should. All 25
+    remaining misreads are on the yellow side.
+  - 0.5 kg test precision 0.715 (Run 1) / 0.660 (2C) / 0.769 (2A). Test mAP@50 0.953 / 0.960 /
+    0.981. Val → test mAP@50–95 gap 0.088 / 0.075 / 0.059.
+  - Test AP@50–95 of the two target classes, which G3 excludes: 1.5 kg 0.611 / 0.632 / 0.702,
+    0.5 kg 0.516 / 0.594 / 0.671.
+- **Not pre-registered, read off the same files. Observations, not tests.**
+  - *Retrain drift is large on this metric.* Run 1 → 2C, same recipe on a different backend and
+    seed: M 40 → 51, missed 21 → 6. 2C moved M by 11 and missed by 15 with no colour change at
+    all. 2A's drop of 26 against 2C is more than twice that drift, but it is one sample of
+    drift, and it is the reason the single seed matters. McNemar says the 26 is not a
+    test-set-sampling accident. It cannot say 2A would beat 2C on a second seed.
+  - *The runs used different thresholds* (0.80, 0.67, 0.53). Each is the value the pre-registered
+    micro-F1 rule picked on that run's own val, so the threshold step is part of each model's
+    frozen evaluation and is not a deviation. At 0.53, 2A has 12 predictions matching no
+    ground-truth box (0.5 kg ×4, 2 kg ×3, 1.5 kg ×2, collar ×2, 5 kg ×1); Run 1 and 2C have none.
+    That is context only. The frozen experiment does not establish how much of the result, if any,
+    comes from the threshold, and this entry does not claim any. An equal-threshold comparison
+    was not pre-registered and was not performed.
+  - 2A is not a cure: 25 of 100 test 1.5 kg plates are still read as 0.5 kg.
+- **What the result supports.** On the date the failure was found, training with a global
+  colour-temperature cast removes about half the 1.5 → 0.5 kg misreads that the same recipe
+  without it leaves, at no measurable cost to the other classes or to overall mAP. The whole
+  chain holds together: Run 1 error analysis → backdrop association → whole-scene recolour test
+  → colour-cast augmentation → fewer misreads, concentrated on the yellow side.
+- **What it does not show. These stay in every document that quotes the result.**
+  1. **The test date was used for diagnosis.** Its errors chose the question, the backdrop check
+     and the recolouring test measured its images, and now the fix is scored on it. 2A's test
+     numbers say whether the known failure is fixed on this date, not how the model does on a
+     new one. A clean number needs a date nobody has looked at, and this dataset has none left.
+     Run 1's 0.741 is the cleaner new-date estimate, because nothing was tuned against it.
+  2. **One seed per arm.** McNemar covers which boxes are in the test set, not training
+     randomness. Run 1 vs 2C is the only look at the second, and it moved by 11.
+  3. **Fixing it does not show lighting was the physical cause.** The augmentation simulates
+     the colour of the light. Succeeding at it supports "robustness to scene colour helps". It
+     does not show that white balance or illumination caused the Run 1 failure on 2025-05-04. It
+     could equally be a backdrop-and-plate colour combination that was rare in training, which
+     any colour-varying augmentation would soften. Also, `PlanckianJitter` moves plate and
+     backdrop together, while the recolouring test moved only the surroundings, so the two
+     experiments are related but not the same one.
+- **Consequences, as the protocol states them.** 2A is the shipped checkpoint: the HF weights
+  and the demo come from `models/kaggle-run2a/run/`. Not done yet: the HF upload, the demo, the
+  ship gate. No further training or tuning against this test date. Any new change needs its own
+  protocol, and its test numbers would be another look at the same images.
+
 ---
 
 ## Superseded design (2026-09-23) — kept for the record

@@ -2,13 +2,16 @@
 
 > Detects weightlifting plates by weight (0.5–25 kg) on a public dataset I audited and re-split
 > after finding train/test leakage. RF-DETR-S fine-tuned on Kaggle, scored on a capture day the
-> model never saw.
+> model never saw, with one failure on that day traced to scene colour and then reduced by a
+> pre-registered colour-augmentation run.
 
 [![CI](https://github.com/Prithv122/custom-detector/actions/workflows/ci.yml/badge.svg)](https://github.com/Prithv122/custom-detector/actions/workflows/ci.yml)
 
 **Live demo:** not deployed yet
-**Stack:** Python 3.12 · RF-DETR-S (Apache-2.0) · Roboflow (dataset source) · Kaggle GPU (training) · imagehash / NumPy (dataset audit)
-**Status:** first training run done (one run, one seed); error analysis and demo pending.
+**Stack:** Python 3.12 · RF-DETR-S (Apache-2.0) · Albumentations (`PlanckianJitter`) · Roboflow (dataset source) · Kaggle GPU (training) · imagehash / NumPy (dataset audit, CIELAB measurements)
+**Status:** three training runs done (Run 1, then a control and a colour-augmented arm), each arm
+with one seed. The colour-augmented checkpoint (2A) is the one selected to ship. Its weights are
+not published and the demo is not built yet.
 
 ---
 
@@ -89,13 +92,20 @@ flowchart LR
 | Questionable images | Excluded by rule, with reasons in the manifest | Trusting the dataset's CC BY label | A licence from the uploader can't cover broadcast footage or agency photos. |
 | Detector | RF-DETR-S | Ultralytics YOLO | YOLO is AGPL-3.0; RF-DETR-S is Apache-2.0 and small enough to train on a free Kaggle GPU. |
 | Near-duplicate test | 256-bit perceptual hash | 64-bit | At 64 bits every close-up of a bar sleeve looks alike (1,311 false cross-date matches). |
+| Error analysis | Each question and its decision rule written and committed before the numbers were computed | Looking at results first | The first hypothesis (same-colour confusion) was wrong, and the written rule is what made that undeniable. |
+| Augmentation | Global colour-temperature cast (`PlanckianJitter`, CIE D series, library defaults) | Hue / saturation jitter | Plate colour is part of the label (1.5 kg is yellow, 0.5 kg white). A hue rotation would teach the model that colour means nothing. A colour-temperature cast moves plate and scene together, the way light does. |
+| Run 2 design | A control run on the same augmentation backend, same seed, no colour transform | Comparing the colour run to Run 1 | Any non-empty augmentation config switches `rfdetr` to a different resize backend, and Run 1 had no seed. Run 1 vs a colour run would change three things at once. |
 
 ## 5. Results
 
-One training run: RF-DETR-S, 50-epoch budget, early-stopped after epoch 39, best checkpoint
-(epoch 36) chosen on val. Tesla T4, 162 min. Test = the held-out capture date, scored once.
-`rfdetr` has no seed option, so this is a single sample; run-to-run spread is unmeasured.
-Raw numbers: [`results/`](results/).
+**Run 1** (the tables below, through the recolouring test): RF-DETR-S, 50-epoch budget,
+early-stopped after epoch 39, best checkpoint (epoch 36) chosen on val. Tesla T4, 162 min. Test =
+the held-out capture date, scored once. Run 1 set no seed, so it is a single sample. **Run 2**
+follows after the recolouring test. Raw numbers: [`results/`](results/).
+
+Which test numbers to trust for a *new* day: Run 1's. Nothing was tuned against that test date
+when it was scored. Every Run 2 number is scored on a date whose errors chose the question (see
+*Run 2*), so it measures the fix, not generalisation.
 
 | | Val (best epoch) | Test (unseen date) | Gap |
 |---|--:|--:|--:|
@@ -158,8 +168,87 @@ per-box values go to `results/backdrop_boxes.csv`.
 - **Limits:** one date, one run, association only. Each test photo holds a single 1.5 kg
   plate, so the planned same-photo control had no pairs, and backdrop can't be separated
   from everything else about a photo. The cheapest causal test is to recolour the backdrop
-  around misread plates and re-run inference. That hasn't been run yet, and neither has a
-  second training run.
+  around misread plates and re-run inference, which is the next section.
+
+### Recolouring test — the scene colour, not the strip next to the plate
+
+Same Run 1 checkpoint, same images, same plate pixels; only the backdrop colour changes, in
+memory. The arms, the target colours and the decision rule were committed before any image was
+altered (NOTES.md, *Recolouring test*). `uv run custom-detector recolour` reproduces it into
+`results/recolour.md` / `.json`.
+
+- **Gate first:** the local CPU pipeline reproduced Run 1's outcome on all 76 unaltered boxes in
+  the arms (0 dropped), so flips are measured against a trustworthy baseline.
+- **Result: pre-registered verdict *for (scene)*.** Of the 40 misread plates, recolouring every
+  non-box pixel in the image to the blue backdrop's colour flips **24 (60%, CI 45–74%)** to a
+  correct 1.5 kg read. Recolouring only a ring around the plate flips **2 (5%, CI 1–17%)**, and
+  28 of those 40 come back as no detection at all. A round-trip that changes nothing (sham)
+  flips 0 of 40, so the pipeline isn't generating the effect.
+- **Not decisive, reported anyway:** recolouring the ring of already-correct yellow-backdrop
+  plates left 14 of 17 correct. The yellow direction (blue → yellow) flipped 6 of 19 but with a
+  median 73% of ring pixels clipped, since a dark blue can't reach that yellow inside the sRGB
+  range, so it is an approximate recolour.
+- **Limits:** this changes the surroundings only, so it can't test "yellow light made the plate
+  itself look pale". One checkpoint, one date. A flip shows the model's read depends on scene
+  colour. It does not show what in the real scene produced that colour.
+
+### Run 2 — colour-cast augmentation, scored against a control
+
+The question, both arms, the guardrails and the decision rule were committed before any
+training (NOTES.md, *Run 2*). Two Kaggle runs on one commit, identical except for the colour
+transform. `uv run custom-detector run2-eval` reproduces the scoring into
+`results/run2_evaluation.md` / `.json`.
+
+| Arm | Augmentation | Role |
+|---|---|---|
+| **2C** control | horizontal flip | Run 1's augmentation, on the Albumentations backend |
+| **2A** colour | horizontal flip + `PlanckianJitter` (CIE D, 4000–15000 K, p = 0.5) | treatment |
+
+Everything else is Run 1's configuration, checked field by field against Run 1's saved config
+(any difference voids the run). One seed per arm (20261001). Each arm uses its own confidence
+threshold, chosen on its own val by Run 1's rule.
+
+**Primary: the 100 test 1.5 kg boxes** (every test photo holds exactly one).
+
+| Run | Threshold | Read as 1.5 kg | Read as 0.5 kg (misread) | Missed | Other |
+|---|--:|--:|--:|--:|--:|
+| Run 1 (reference) | 0.80 | 36 | 40 | 21 | 3 |
+| 2C control | 0.67 | 40 | 51 | 6 | 3 |
+| 2A colour | 0.53 | **72** | **25** | 0 | 3 |
+
+- **Pre-registered verdict: fixed.** 2A misreads 25 against the control's 51. The rule required
+  at most 25 (half, rounded down), so this clears the bar with no slack: one more misread and
+  the verdict would have been *not fixed*. Paired on the same 100 boxes, 26 are misread by the
+  control only and none by 2A only (exact McNemar, one-sided, p = 1.5e-8). The gain went to
+  correct reads (+32), not to misses.
+- **Guardrails held**, 2A against 2C: test mAP@50–95 0.762 vs 0.748, val 0.821 vs 0.823, and
+  no other class's test AP@50–95 dropped by more than 0.011 (limit 0.05).
+- **Where it shows up:** on photos with the yellow backdrop, misreads fell 51 → 25 and correct
+  reads rose 17 → 49. On the blue backdrop nothing changed (0 misreads, 23 correct, both
+  arms). All 25 remaining misreads are on the yellow side. 0.5 kg precision: 0.715 (Run 1),
+  0.660 (2C), 0.769 (2A).
+- **The failure was not a one-off:** the control, retrained without any colour change,
+  misreads 51, more than Run 1's 40. That is also a measure of how much a retrain moves this
+  number (11 on misreads, 15 on misses), and it is the scale to read the 26-box gap against.
+- **Not a cure:** 25 of 100 test 1.5 kg plates are still read as 0.5 kg.
+
+**What this cannot show:**
+
+- **The test date was used for diagnosis.** Its errors chose the question, two analyses measured
+  its images, and the fix is scored on it. These numbers say whether the known failure is
+  reduced on this date, not how the model does on a new one. This dataset has no untouched date
+  left, so there is no clean number for the shipped checkpoint. Run 1's test scores, taken before
+  any of this, are the cleaner estimate.
+- **One seed per arm.** McNemar accounts for which boxes are in the test set, not for training
+  randomness. The Run 1 vs control gap above is the only look at the second.
+- **Success does not show that lighting was the physical cause.** The augmentation simulates the
+  colour of the light, so a fix supports "robustness to scene colour helps". It doesn't show that
+  white balance or illumination caused the failure on that day. It also shifts plate and
+  backdrop together, whereas the recolouring test changed only the surroundings.
+- **The arms used different confidence thresholds** (0.67 and 0.53), each picked on that arm's
+  own val by a rule fixed before training, so this is part of the frozen evaluation. For context,
+  2A at 0.53 has 12 predictions that match no labelled box and the control has none. An
+  equal-threshold comparison was not pre-registered and was not performed.
 
 Val is optimistic by design: it shares capture dates with train. The test gap is the number
 that describes a new day.
@@ -188,7 +277,18 @@ uv run custom-detector summary       # split sizes, class coverage, cross-split 
 Training runs on a free Kaggle GPU: import `notebooks/train_rfdetr_kaggle.ipynb` into Kaggle,
 set *Accelerator* to GPU T4, turn *Internet* on, add `ROBOFLOW_API_KEY` under *Secrets*, and run
 all. It rebuilds the same cleaned split from the pinned export and the committed manifest,
-checks it, trains RF-DETR-S, and writes metrics and val/test predictions to `results/`.
+checks it, trains RF-DETR-S, and writes metrics and val/test predictions to `results/`. For Run 2
+the notebook has a `RUN` switch (`"2C"` control, `"2A"` colour); both arms ran on the pinned commit
+it names.
+
+With the Run 1 checkpoint and the export in place, the analyses reproduce locally:
+
+```bash
+uv run custom-detector evaluate     # Run 1 error analysis
+uv run custom-detector backdrop     # backdrop check
+uv run custom-detector recolour     # recolouring test (CPU inference)
+uv run custom-detector run2-eval    # Run 2 scoring, from results/run2a and results/run2c
+```
 
 `uv run custom-detector manifest` rebuilds `data/manifest.csv` from the export. With the export
 present, the test suite checks the rebuild matches the committed file exactly.
