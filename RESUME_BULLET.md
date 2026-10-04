@@ -6,9 +6,10 @@ Form: **action → technical specifics → measured outcome.** Numbers or it doe
 
 ## Bullets
 
-- Audited a 2,251-image public weightlifting-plate dataset with 256-bit perceptual hashing, found 315 images with a near-duplicate in another split, excluded 255 images that couldn't be licensed, and re-split by capture date (1,996 images, 11 classes) so the test set is a whole day the model never saw.
+- Audited a 2,251-image public weightlifting-plate dataset with 256-bit perceptual hashing, found 315 images whose nearest near-duplicate sat in another split, excluded 250 images that couldn't be licensed (plus 5 with missing or contradictory labels), and re-split by capture date (1,996 images, 11 classes) so the test set is a whole day the model never saw.
 - Fine-tuned RF-DETR-S on a Kaggle T4 to 0.953 mAP@50 / 0.741 mAP@50–95 on that held-out day, then traced its worst failure (40 of 100 test 1.5 kg plates read as 0.5 kg) to scene colour with two analyses whose decision rules were committed before any number was computed.
 - Cut that misread from 51 to 25 of 100 against a matched control retrain by adding a colour-temperature augmentation (paired exact McNemar p = 1.5e-8, single seed per arm), with no other class losing more than 0.011 AP. Scored on the day used for diagnosis, so it is a targeted fix and not a new-day estimate.
+- Published the shipped checkpoint to the Hugging Face Hub with a model card and ran it in a CPU Gradio demo that fetches it at a pinned commit and checks its SHA-256 before loading; 100 test photos sent through the running app reproduced the Kaggle outputs exactly (72 correct / 25 misread / 0 missed / 3 other, 0 of 100 outcomes different).
 
 **Shorter form, one line:** Fine-tuned RF-DETR-S on a leakage-free, date-held-out split (0.741 mAP@50–95, 0.953 mAP@50) and cut a diagnosed 1.5 kg → 0.5 kg misread from 51 to 25 of 100 against a matched control (single seed, diagnosed date).
 
@@ -29,7 +30,7 @@ _Only list what you actually used and could be questioned on._
 RF-DETR · object detection · mAP@50 / mAP@50–95 · COCO evaluation · fine-tuning on a Kaggle T4 ·
 perceptual hashing (train/test leakage) · date-grouped split · pre-registered analysis ·
 CIELAB colour space · data augmentation (`PlanckianJitter`, Albumentations) · matched control
-experiment · paired exact McNemar test · cluster bootstrap
+experiment · paired exact McNemar test · cluster bootstrap · Hugging Face Hub (pinned, hash-checked model artifact) · Gradio
 
 ## Before using a number
 

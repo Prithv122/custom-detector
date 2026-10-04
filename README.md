@@ -53,7 +53,9 @@ Every image, its exclusion reason and its new split are in [`data/manifest.csv`]
 
 Photos in this dataset come in sessions: one bar photographed over and over with a small plate
 swapped between shots. The published split was random per image, so near-copies landed on both
-sides: by a 256-bit perceptual hash, 315 images have a near-identical twin in a different split.
+sides: by a 256-bit perceptual hash, 315 images have their nearest near-identical twin in a
+different split. That count comes from the one-off dataset audit (NOTES.md), not from
+committed code: no script in the repo reproduces the 315.
 A model scored on that test set is partly scored on photos it trained on.
 
 New split, grouped so near-copies can't cross it:
@@ -66,8 +68,9 @@ New split, grouped so near-copies can't cross it:
 
 Each rule uses only dates, sessions and class counts, never model results. Every class has at
 least 46 val and 70 test images. No pair of images in different splits is within 30 bits
-(near-copies are ≤ 20). The test date is also the only one shot in portrait, with its own
-backdrop — so test measures a new day *and* a slightly different setup.
+(near-copies are ≤ 20). The test date is also 96% portrait (387 of 402 images, against 0–28%
+on the other dates), with its own backdrop — so test measures a new day *and* a slightly
+different setup.
 
 ## 3. Architecture
 
@@ -110,11 +113,11 @@ when it was scored. Every Run 2 number is scored on a date whose errors chose th
 
 | | Val (best epoch) | Test (unseen date) | Gap |
 |---|--:|--:|--:|
-| mAP@50 | 0.993 | **0.953** | −0.040 |
+| mAP@50 | 0.993 | **0.953** | −0.039 |
 | mAP@50–95 | 0.829 | **0.741** | −0.088 |
 | Precision / recall | 0.976 / 0.972 | 0.916 / 0.963 | |
 
-Per-class AP (@50–95):
+Per-class AP (@50–95; the val column uses the EMA weights, like the headline val number):
 
 | Class | Val | Test | Gap |
 |---|--:|--:|--:|
@@ -146,7 +149,7 @@ reproduces everything below into `results/evaluation.md` / `.json`.
   *mixed* (0.5 kg has no errors of its own to classify); the plain reading is that colour
   twins are not the problem. The confusion is between **size neighbours of different colour**
   (yellow 1.5 kg → white 0.5 kg).
-- Every other class keeps recall ≥ 0.83 on test; the one other val weakness (22 of 118 2 kg
+- Every other class keeps recall above 0.82 on test (lowest: 2 kg, 73 of 88); the one other val weakness (22 of 118 2 kg
   → 1 kg) does not recur on test.
 
 ### Backdrop check — misread plates sit in front of the yellow backdrop
@@ -315,7 +318,22 @@ present, the test suite checks the rebuild matches the committed file exactly.
 
 ## 7. What I'd change at 100× scale
 
-Pending — written after training.
+100× here means about 200,000 images instead of 1,996, and a model someone relies on. The model
+is not what breaks first. The data audit, the evaluation and serving are. Figures marked
+*arithmetic* are extrapolations from this repo's numbers, not measurements.
+
+| Part | Today | At 100× | What I'd change |
+|---|---|---|---|
+| Duplicate audit | `split.py` builds a dense n × n Hamming matrix of 256-bit hashes: about 16 MB of `int32` at 1,996 images | about 160 GB at 200,000 (*arithmetic*) | Index the hashes (multi-index hashing or approximate nearest neighbours) and compare candidate pairs only. `choose_test_dates` also tries every subset of capture dates, which is fine for 7 dates and not for hundreds. |
+| Licence and provenance | Excluded by filename pattern and by looking at the images; the author of the phone photos is still unverified | Many uploaders, no way to look at every image | Record source, author and licence per image at ingest and refuse images without them. |
+| Label quality | Found 3 images with no boxes and 2 with contradictory labels by rule | Rules won't catch the long tail | Queue the images where the trained model and the labels disagree for human review. |
+| Test set | One date, already used for diagnosis, so it can no longer give a clean number for the shipped checkpoint | Every analysis spends the held-out data | Reserve prospectively collected dates that nobody analyses, and score each release on one only once. |
+| Seeds | One seed per arm; retraining without any colour change moved misreads from 40 to 51 | A single run can't separate a real gain from retraining noise | Several seeds per arm, with intervals, under the same pre-registered rules. |
+| Slices | The 1.5 kg failure hid behind an overall mAP@50 of 0.953 and appeared only per class (AP@50–95 0.611 on test) | Failures hide in more places | Report metrics per class, session and backdrop colour automatically on every run. |
+| Training | Run 1 took 162 minutes on one T4 (the two Run 2 arms took 126 and 137) | If cost grew with image count, about 11 days per run from Run 1's time (*arithmetic*) | Rent multi-GPU time and track experiments. Move to a larger Apache-2.0 RF-DETR size only if the data supports it; the XL sizes carry a different licence. |
+| Serving | CPU demo on one machine: median 3.9 s per photo, worst 17.8 s | Not usable for traffic | Resize before inference, export the model (ONNX) and run it batched on a GPU behind a queue. Keep the hash-pinned checkpoint. |
+| Monitoring | None | Drift goes unseen | Track the confidence distribution and the 0.5 kg / 1.5 kg read ratio per scene colour, since scene colour is the known failure. At the shipped threshold, 12 test-day predictions match no labelled box; watch that too. |
+| Loaded weight | Never measured: the public set has no independent ground truth, so the demo does not sum plates | Needed before the product claim | Collect photos with the recorded load, as the archived capture protocol set out, and score the exact total before showing one. |
 
 ---
 

@@ -12,8 +12,8 @@ _A:_ The task is reading plate weights off a photo of a loaded barbell sleeve: 1
 0.5 to 25 kg plus the collar, 11 classes. The data is a public Roboflow dataset. I audited it
 before training: 2,251 images, of which I excluded 255 by rule (competition-video crops and press
 photos the uploader can't license, plus unlabelled and contradictory ones), leaving 1,996. I also
-replaced its split, because a 256-bit perceptual hash showed 315 images with a near-identical
-twin on the other side. My split is by capture date and session: the test set is one whole date
+replaced its split, because a 256-bit perceptual hash showed 315 images whose nearest
+near-identical twin was on the other side. My split is by capture date and session: the test set is one whole date
 the model never sees (402 images), val is whole sessions (331), train is the rest (1,263). Every
 exclusion and split assignment is in one committed manifest, so the set rebuilds exactly.
 
@@ -21,7 +21,9 @@ The model is RF-DETR-S fine-tuned on a free Kaggle T4, two to three hours a run.
 the saved predictions off the GPU, so the evaluation code has real tests. Run 1 gave test
 mAP@50 0.953 and mAP@50–95 0.741. Its two worst classes, 0.5 and 1.5 kg, turned out to be one
 error: 40 of 100 test 1.5 kg plates were called 0.5 kg. I traced that to scene colour with two
-pre-registered checks, then trained a control and a colour-augmented model to test the fix.
+pre-registered checks, then trained a control and a colour-augmented model to test the fix. The
+colour-augmented checkpoint is on the Hugging Face Hub at a pinned commit with a model card, and
+a local Gradio demo runs it on CPU after checking its SHA-256. The demo is local only, not hosted.
 
 ### Q2. Why did you choose ___ over ___?
 
@@ -58,8 +60,9 @@ _A:_ Three things, in the order I'd worry about them.
 3. **It's not a cure:** 25 of 100 test 1.5 kg plates are still read as 0.5 kg, all of them
    against the yellow backdrop.
 
-"Under load" doesn't quite apply: this is a model, not a service, and I haven't measured
-inference latency. What breaks first is a new gym or lighting, since all the data is one set of
+"Under load" doesn't quite apply: this is a model, not a service. The only timing I have is the
+local demo on one CPU machine, median 3.9 s per photo and 17.8 s worst, with no load test. What
+breaks first is a new gym or lighting, since all the data is one set of
 photos from 7 dates, one date held out.
 
 ### Q4. How do you know it works? What did you measure, and against what baseline?

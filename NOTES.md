@@ -423,7 +423,9 @@ a separate, dated entry.
 Programmatic over all 2,251 images; model vision only on 28 flagged or sampled images.
 
 - **Leakage in the published split.** 256-bit pHash: 1,117 images have a near-identical twin
-  (distance ≤ 20); for 315 of them the twin sits in a different split. Cause: each session is a
+  (distance ≤ 20); for 315 of them the nearest twin sits in a different split. This is a one-off
+  audit count; no committed script reproduces it (a ship-time recount confirmed 315 for the
+  nearest-twin definition, and about 676 if any twin in another split counts). Cause: each session is a
   series of shots of one rig with one small plate swapped between shots — `…120057` (train) and
   `…120030` (valid) are the same bar, 27 s apart. No exact duplicates (SHA-256).
 - **Near-duplicates never cross dates.** A 64-bit pHash flagged 1,311 cross-date pairs; all were
@@ -434,8 +436,9 @@ Programmatic over all 2,251 images; model vision only on 28 flagged or sampled i
   photos from Olympic / Beijing 2008 / Santiago 2023 events, one with an agency credit.
 - **Classes are tied to dates.** e.g. no 15 kg on 2025-05-01, 09-29, 10-09; no 5 kg on 3 dates.
   A split by date must be checked for class coverage — the test-date rule does exactly that.
-- **Domain shift in test.** 2025-05-04 is the only date shot portrait (480×640) and uncropped,
-  with a distinctive backdrop; other dates are cropped square. Report it next to the numbers.
+- **Domain shift in test.** 2025-05-04 is 96% portrait (387 of 402 kept images, 480×640), with a
+  distinctive backdrop; the other dates are 0–28% portrait (corrected at ship time from "the
+  only date shot portrait", which the manifest contradicts). Report it next to the numbers.
 - Clean split check: no cross-split pair within 30 bits; closest are 32 (train/val), 84
   (train/test), 82 (val/test).
 
@@ -836,7 +839,20 @@ no scoring, nothing in `results/` changed, and the demo produces no new accuracy
     `models/` folder: ruff clean, 162 passed and 2 skipped (the two tests that need the Roboflow
     export or the prepared dataset), and the app downloaded the pinned snapshot `be16623` and ran.
     Reloading the page returns to a clean state at 0.53.
-- Not done: a hosted version (a public Space), README §7, the ship gate.
+- Not done at this point: README §7, the ship gate (both closed in the entry below).
+
+### 2026-10-04 — README §7 and the ship gate
+
+- **§7 is grounded in this repo's own numbers.** Each row pairs something measured here (the dense
+  n × n hash matrix in `split.py`, the 162-minute T4 run, the control retrain that moved misreads
+  from 40 to 51, the demo's median 3.9 s and worst 17.8 s on CPU) with what I'd change. The two
+  extrapolations (about 160 GB for the matrix at 200,000 images, about 11 days per run) are marked
+  as arithmetic in the README, not as measurements.
+- **Gate findings fixed:** the repo had no tracked `GUIDELINES.md` (project rules lived in an
+  untracked file), so one was added at the root. The resume bullet said 255 images "couldn't be
+  licensed"; 250 couldn't (225 `ZE_*`, 25 numbered) and 5 were label problems. INTERVIEW Q3 said
+  latency was never measured, which the demo QA had since done.
+- **The demo stays local.** No example photos and no hosted copy ship with the project.
 
 ---
 
