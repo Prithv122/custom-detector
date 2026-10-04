@@ -1,0 +1,34 @@
+{
+  "repo_id": "Prithv122/custom-detector",
+  "revision": "be16623ab1de46cc2e2b9e4df477af5d71d04c58",
+  "file": "checkpoint_best_total.pth",
+  "size_bytes": 127623409,
+  "sha256_expected": "f802956130702712f05bfb82d8b437ea1648efe642ff90bbba2fb38a1d8bce1f",
+  "sha256_downloaded": "f802956130702712f05bfb82d8b437ea1648efe642ff90bbba2fb38a1d8bce1f",
+  "sha256_local": "f802956130702712f05bfb82d8b437ea1648efe642ff90bbba2fb38a1d8bce1f",
+  "sha256_match": true,
+  "inference": {
+    "device": "cpu",
+    "threshold": 0.53,
+    "boxes": 100,
+    "counts_downloaded_cpu": {
+      "1.5kg": 72,
+      "0.5kg": 25,
+      "missed": 0,
+      "other": 3
+    },
+    "counts_kaggle_gpu": {
+      "1.5kg": 72,
+      "0.5kg": 25,
+      "missed": 0,
+      "other": 3
+    },
+    "outcome_mismatches": {}
+  },
+  "versions": {
+    "python": "3.12.13",
+    "rfdetr": "1.11.0",
+    "torch": "2.14.0",
+    "huggingface_hub": "1.33.0"
+  }
+}

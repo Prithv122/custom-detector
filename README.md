@@ -9,9 +9,10 @@
 
 **Live demo:** not deployed yet
 **Stack:** Python 3.12 · RF-DETR-S (Apache-2.0) · Albumentations (`PlanckianJitter`) · Roboflow (dataset source) · Kaggle GPU (training) · imagehash / NumPy (dataset audit, CIELAB measurements)
+**Weights:** [Prithv122/custom-detector](https://huggingface.co/Prithv122/custom-detector) on the Hugging Face Hub (checkpoint 2A, with a model card)
 **Status:** three training runs done (Run 1, then a control and a colour-augmented arm), each arm
-with one seed. The colour-augmented checkpoint (2A) is the one selected to ship. Its weights are
-not published and the demo is not built yet.
+with one seed. The colour-augmented checkpoint (2A) is the one selected to ship, and its weights
+are published. The demo is not built yet.
 
 ---
 
@@ -288,6 +289,13 @@ uv run custom-detector evaluate     # Run 1 error analysis
 uv run custom-detector backdrop     # backdrop check
 uv run custom-detector recolour     # recolouring test (CPU inference)
 uv run custom-detector run2-eval    # Run 2 scoring, from results/run2a and results/run2c
+```
+
+The published 2A checkpoint can be checked against the Hub (download at a pinned revision,
+SHA-256, CPU inference on the 100 test 1.5 kg boxes compared with the Kaggle predictions):
+
+```bash
+uv run python scripts/verify_hf_checkpoint.py --revision be16623ab1de46cc2e2b9e4df477af5d71d04c58
 ```
 
 `uv run custom-detector manifest` rebuilds `data/manifest.csv` from the export. With the export

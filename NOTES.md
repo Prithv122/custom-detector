@@ -757,6 +757,31 @@ Programmatic over all 2,251 images; model vision only on 28 flagged or sampled i
   ship gate. No further training or tuning against this test date. Any new change needs its own
   protocol, and its test numbers would be another look at the same images.
 
+### 2026-10-04 — 2A checkpoint published to the Hugging Face Hub
+
+Publication only. No training, no re-scoring, and nothing in `results/` from Run 2 changed.
+
+- **Where:** https://huggingface.co/Prithv122/custom-detector (public), Hub commit
+  `be16623ab1de46cc2e2b9e4df477af5d71d04c58`. Two files went up in one commit:
+  `checkpoint_best_total.pth` (from `models/kaggle-run2a/run/`) and the model card
+  (`MODEL_CARD.md` here, `README.md` on the Hub).
+- **The file:** 127,623,409 bytes, SHA-256
+  `f802956130702712f05bfb82d8b437ea1648efe642ff90bbba2fb38a1d8bce1f`. The Hub's own LFS
+  SHA-256 for the file is the same value.
+- **The card** is written only from `results/run2_evaluation.*` and the Run 2 write-up above. It
+  carries all three limits from that entry, Run 1's 0.741 as the new-day estimate, and the
+  zero-slack pass of criterion (a). It makes no claim about colour or lighting robustness in
+  general. Weights are released as Apache-2.0, following the RF-DETR-S base model, with CC BY 4.0
+  attribution for the dataset.
+- **Round trip** (`scripts/verify_hf_checkpoint.py`, output `results/hf_publication.json`): it
+  downloads the file at that revision into an empty cache, so the local copy can't stand in for it.
+  The downloaded SHA-256 matches. CPU inference with the downloaded copy (torch 2.14.0, rfdetr
+  1.11.0) on the 100 test 1.5 kg boxes at 2A's threshold 0.53 gives 72 / 25 / 0 / 3 (read 1.5 kg
+  / read 0.5 kg / missed / other). That is the same as the Kaggle GPU predictions, with **0 of 100
+  box outcomes different**. This checks that the published file works. It is not a new
+  measurement, because these are the same boxes Run 2 was scored on.
+- Not done: the demo, README §7, the ship gate.
+
 ---
 
 ## Superseded design (2026-09-23) — kept for the record
