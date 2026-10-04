@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import importlib.util
 import json
 import os
 import sys
@@ -17,6 +18,14 @@ from detector.dataset import CLASSES
 from detector.dataset.manifest import build_manifest, read_manifest, write_manifest
 from detector.dataset.prepare import download, materialize
 from detector.dataset.split import assign_splits, cross_split_near_duplicates
+from detector.demo import (
+    DEFAULT_THRESHOLD,
+    MAX_THRESHOLD,
+    MIN_THRESHOLD,
+    build_app,
+    example_images,
+)
+from detector.demo import load as load_demo_model
 from detector.evaluate import evaluate, format_report
 from detector.recolour_run import arm_rows
 from detector.recolour_run import format_summary as format_recolour_summary
@@ -112,6 +121,20 @@ def _cmd_recolour(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_demo(args: argparse.Namespace) -> int:
+    if not MIN_THRESHOLD <= args.threshold <= MAX_THRESHOLD:
+        print(f"--threshold must be between {MIN_THRESHOLD} and {MAX_THRESHOLD}", file=sys.stderr)
+        return 1
+    if importlib.util.find_spec("gradio") is None:
+        print("The demo needs Gradio: run `uv sync --extra demo`", file=sys.stderr)
+        return 1
+    examples = example_images(Path(args.examples)) if args.examples else None
+    model = load_demo_model(Path(args.checkpoint) if args.checkpoint else None)
+    app = build_app(model, args.threshold, examples)
+    app.launch(server_name="127.0.0.1", server_port=args.port, share=False)
+    return 0
+
+
 def _cmd_summary(args: argparse.Namespace) -> int:
     return _summary(read_manifest(Path(args.manifest)))
 
@@ -172,6 +195,15 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--results", default=str(RESULTS_DIR))
     p.add_argument("--checkpoint", default=str(CHECKPOINT))
     p.set_defaults(func=_cmd_recolour)
+
+    p = sub.add_parser(
+        "demo", help="Local web demo on the published 2A checkpoint (needs --extra demo)"
+    )
+    p.add_argument("--threshold", type=float, default=DEFAULT_THRESHOLD)
+    p.add_argument("--port", type=int, default=7860)
+    p.add_argument("--checkpoint", help="local copy of the 2A checkpoint (hash-checked)")
+    p.add_argument("--examples", help="folder of photos to offer as clickable examples")
+    p.set_defaults(func=_cmd_demo)
 
     p = sub.add_parser("summary", help="Print split sizes and class coverage from the manifest")
     p.add_argument("--manifest", default=str(MANIFEST))

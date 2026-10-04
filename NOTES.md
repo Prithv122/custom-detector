@@ -782,6 +782,62 @@ Publication only. No training, no re-scoring, and nothing in `results/` from Run
   measurement, because these are the same boxes Run 2 was scored on.
 - Not done: the demo, README §7, the ship gate.
 
+### 2026-10-04 — local demo on the published 2A checkpoint
+
+A Gradio app, `custom-detector demo`, on the Hub checkpoint at commit `be16623`. No training,
+no scoring, nothing in `results/` changed, and the demo produces no new accuracy number.
+
+- **Default threshold 0.53, not a round 0.5.** 0.53 is 2A's val-chosen value, the one the model
+  card, the round-trip check and every test number use. A slider covers other values, and the
+  page says which one the numbers belong to.
+- **One model call per photo.** The model runs at the evaluation floor (0.01) and the slider
+  filters those detections with `>=`, the same cut the evaluation applies. Moving the slider
+  costs a redraw, not an inference.
+- **The checkpoint is pinned and hashed.** It is fetched at the pinned Hub commit and its SHA-256
+  is checked before `torch.load` runs on the pickled file, also for a `--checkpoint` path. A test
+  ties the pinned commit, hash and default threshold to `results/hf_publication.json` and
+  `results/run2_evaluation.json`.
+- **Local only.** It binds to 127.0.0.1; photos never leave the machine. Gradio is an optional
+  `demo` extra, so the evaluation code and a plain `uv sync` don't carry it. CI installs it so the
+  app wiring is tested.
+- **No weight total.** The page lists detections and counts per class. It does not sum plate
+  weights: the loaded-weight metric was dropped for lack of ground truth, and a total shown next
+  to a photo would read as that measurement.
+- **No example photos in the repo.** The kept images are third-party photos whose author is
+  unverified (see the open question below), so `--examples <folder>` reads a local folder instead.
+- **The limits on the page are quoted from the result files** (72 / 25 / 0 / 3 at 0.53, 51 to 25,
+  12 predictions matching no labelled box), and a test pins the first two to
+  `results/run2_evaluation.json`.
+- **Found while checking it in a browser:** the slider's `release` event fires only when the handle
+  is dragged, so typing a value in its number box changed nothing. Switched to `change`; typing 0.9
+  then took one example photo from 4 detections to 2.
+- **Review fixes (diff-only review, before this entry):** `launch` now passes `share=False`,
+  because Gradio turns sharing on from an environment variable or a notebook host and the page says
+  photos stay on this machine. A threshold moved while the model is still running is re-applied once
+  inference ends (`photo.change(...).then(...)`), so the slider and the boxes can't disagree. Tests
+  now pin the page's numbers to the result files and the slider's trigger. Left alone: the hash is
+  checked and the file then read again, which only a local process with write access to the Hub
+  cache could exploit.
+- **Evidence:** 164 tests pass (22 new), ruff clean. The app launched from the Hub path (download,
+  hash check, CPU load), and clicking a test-split example drew boxes, a count line and a table.
+  That is a smoke check on one photo, not an evaluation.
+- **QA pass (same day, after the review fixes):**
+  - All 100 test-date 1.5 kg photos sent through the running app's HTTP endpoint at 0.53 and scored
+    with the evaluation's own matching: 72 / 25 / 0 / 3, **0 of 100 outcomes different** from the
+    Kaggle 2A predictions. This goes through the app's rounded output table, so it checks the app,
+    not the model again (same boxes as Run 2).
+  - Five hand-picked photos in the browser matched their recorded 2A outcome (two still read as
+    0.5 kg, two fixed, one "other"). On a still-misread one the same box is 0.5 kg at 0.776 and 1.5 kg
+    at 0.452, below the cut, which is the failure the page describes.
+  - Odd inputs: grayscale, RGBA, WebP, a 4000x3000 JPEG (10.6 s), a 1x1 image and a blank one all
+    return normally; a text file renamed `.png` is rejected by the upload component with an error
+    toast. CPU time: median 3.9 s per photo, max 17.8 s on this machine.
+  - A copy of the tracked files in a fresh environment with an empty Hugging Face cache and no
+    `models/` folder: ruff clean, 162 passed and 2 skipped (the two tests that need the Roboflow
+    export or the prepared dataset), and the app downloaded the pinned snapshot `be16623` and ran.
+    Reloading the page returns to a clean state at 0.53.
+- Not done: a hosted version (a public Space), README §7, the ship gate.
+
 ---
 
 ## Superseded design (2026-09-23) — kept for the record

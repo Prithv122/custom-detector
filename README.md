@@ -7,12 +7,12 @@
 
 [![CI](https://github.com/Prithv122/custom-detector/actions/workflows/ci.yml/badge.svg)](https://github.com/Prithv122/custom-detector/actions/workflows/ci.yml)
 
-**Live demo:** not deployed yet
+**Demo:** runs locally on the published checkpoint (`uv run --extra demo custom-detector demo`, see section 6); not hosted anywhere
 **Stack:** Python 3.12 · RF-DETR-S (Apache-2.0) · Albumentations (`PlanckianJitter`) · Roboflow (dataset source) · Kaggle GPU (training) · imagehash / NumPy (dataset audit, CIELAB measurements)
 **Weights:** [Prithv122/custom-detector](https://huggingface.co/Prithv122/custom-detector) on the Hugging Face Hub (checkpoint 2A, with a model card)
 **Status:** three training runs done (Run 1, then a control and a colour-augmented arm), each arm
 with one seed. The colour-augmented checkpoint (2A) is the one selected to ship, and its weights
-are published. The demo is not built yet.
+are published. A local demo app runs that checkpoint; there is no hosted version.
 
 ---
 
@@ -265,6 +265,18 @@ cd custom-detector
 uv sync
 uv run pytest            # split invariants are checked from the committed manifest
 ```
+
+The demo runs the published 2A checkpoint on CPU, with no dataset or API key needed:
+
+```bash
+uv run --extra demo custom-detector demo     # http://127.0.0.1:7860, this machine only
+```
+
+The first run downloads the 128 MB checkpoint from the Hub at the pinned commit and checks its
+SHA-256 before loading it. The confidence slider starts at 0.53, the value chosen on the
+validation split. The model runs once per photo and the slider only filters its detections.
+`--examples <folder>` adds clickable photos from a local folder (for instance
+`data/processed/plates_v10_clean/test` after `prepare`); no photos are shipped in the repo.
 
 Rebuilding the dataset needs a free Roboflow API key:
 
