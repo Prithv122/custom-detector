@@ -1,0 +1,397 @@
+{
+  "protocol": "NOTES.md - Run 2 (colour-cast augmentation)",
+  "verdict": "fixed",
+  "consequence": "2A becomes the shipped checkpoint (HF weights and the demo).",
+  "invalid_reasons": [],
+  "primary": {
+    "M_2C": 51,
+    "K_2C": 40,
+    "M_2A": 25,
+    "K_2A": 72,
+    "mcnemar_b_misread_by_2C_only": 26,
+    "mcnemar_c_misread_by_2A_only": 0,
+    "p_one_sided": 1.4901161193847656e-08,
+    "criteria": {
+      "void": false,
+      "a_halved": true,
+      "b_significant": true,
+      "c_correct_not_missed": true,
+      "d_guardrails": true
+    }
+  },
+  "guardrails": {
+    "G1": {
+      "2C": 0.7476829290390015,
+      "2A": 0.7615188956260681,
+      "margin": 0.02,
+      "ok": true
+    },
+    "G2": {
+      "2C": 0.8225826025009155,
+      "2A": 0.8205718994140625,
+      "margin": 0.02,
+      "ok": true
+    },
+    "G3": {
+      "margin": 0.05,
+      "classes": {
+        "1kg": {
+          "2C": 0.6901456117630005,
+          "2A": 0.686391294002533,
+          "drop": 0.0037543177604675293,
+          "ok": true
+        },
+        "2kg": {
+          "2C": 0.7333175539970398,
+          "2A": 0.7221105694770813,
+          "drop": 0.011206984519958496,
+          "ok": true
+        },
+        "2.5kg": {
+          "2C": 0.6876487135887146,
+          "2A": 0.6918199062347412,
+          "drop": -0.004171192646026611,
+          "ok": true
+        },
+        "5kg": {
+          "2C": 0.7071126103401184,
+          "2A": 0.7247028350830078,
+          "drop": -0.017590224742889404,
+          "ok": true
+        },
+        "10kg": {
+          "2C": 0.812734067440033,
+          "2A": 0.8290413022041321,
+          "drop": -0.01630723476409912,
+          "ok": true
+        },
+        "15kg": {
+          "2C": 0.8301085233688354,
+          "2A": 0.8247637748718262,
+          "drop": 0.005344748497009277,
+          "ok": true
+        },
+        "20kg": {
+          "2C": 0.8416951894760132,
+          "2A": 0.8323931694030762,
+          "drop": 0.009302020072937012,
+          "ok": true
+        },
+        "25kg": {
+          "2C": 0.8754081130027771,
+          "2A": 0.8813936114311218,
+          "drop": -0.0059854984283447266,
+          "ok": true
+        },
+        "zacisk": {
+          "2C": 0.8203141093254089,
+          "2A": 0.8108068704605103,
+          "drop": 0.009507238864898682,
+          "ok": true
+        }
+      },
+      "ok": true
+    },
+    "all_ok": true
+  },
+  "runs": {
+    "run1": {
+      "threshold": 0.8,
+      "val_micro_f1": 0.9775753328661527,
+      "counts": {
+        "1.5kg": 36,
+        "0.5kg": 40,
+        "missed": 21,
+        "other": 3
+      },
+      "by_side": {
+        "yellow": {
+          "1.5kg": 17,
+          "0.5kg": 40,
+          "missed": 17,
+          "other": 2
+        },
+        "blue": {
+          "1.5kg": 19,
+          "0.5kg": 0,
+          "missed": 4,
+          "other": 1
+        }
+      },
+      "precision_0.5kg": 0.7152777777777778,
+      "confusion": {
+        "0.5kg": {
+          "0.5kg": 103
+        },
+        "1.5kg": {
+          "0.5kg": 40,
+          "1.5kg": 36,
+          "15kg": 1,
+          "1kg": 2,
+          "missed": 21
+        },
+        "10kg": {
+          "10kg": 109,
+          "20kg": 1,
+          "missed": 13
+        },
+        "15kg": {
+          "15kg": 61,
+          "missed": 9
+        },
+        "1kg": {
+          "1kg": 85,
+          "missed": 5
+        },
+        "2.5kg": {
+          "2.5kg": 356,
+          "missed": 11
+        },
+        "20kg": {
+          "20kg": 92
+        },
+        "25kg": {
+          "15kg": 3,
+          "20kg": 3,
+          "25kg": 496,
+          "zacisk": 1
+        },
+        "2kg": {
+          "2kg": 73,
+          "missed": 15
+        },
+        "5kg": {
+          "0.5kg": 1,
+          "5kg": 73,
+          "missed": 9
+        },
+        "zacisk": {
+          "zacisk": 364
+        }
+      },
+      "metrics": {
+        "test_map_50_95": 0.7409378290176392,
+        "test_map_50": 0.9534404277801514,
+        "val_map_50_95": 0.8293076157569885,
+        "val_best_epoch": 36,
+        "val_to_test_gap_map_50_95": 0.08836978673934937,
+        "test_ap": {
+          "0.5kg": 0.516411542892456,
+          "1kg": 0.6760892868041992,
+          "1.5kg": 0.6112644672393799,
+          "2kg": 0.6982122659683228,
+          "2.5kg": 0.7061139345169067,
+          "5kg": 0.6852530241012573,
+          "10kg": 0.8245844841003418,
+          "15kg": 0.8512624502182007,
+          "20kg": 0.8638767600059509,
+          "25kg": 0.8909648656845093,
+          "zacisk": 0.8262832760810852
+        }
+      }
+    },
+    "2C": {
+      "threshold": 0.67,
+      "val_micro_f1": 0.9755415793151643,
+      "counts": {
+        "1.5kg": 40,
+        "0.5kg": 51,
+        "missed": 6,
+        "other": 3
+      },
+      "by_side": {
+        "yellow": {
+          "1.5kg": 17,
+          "0.5kg": 51,
+          "missed": 6,
+          "other": 2
+        },
+        "blue": {
+          "1.5kg": 23,
+          "0.5kg": 0,
+          "missed": 0,
+          "other": 1
+        }
+      },
+      "precision_0.5kg": 0.6602564102564102,
+      "confusion": {
+        "0.5kg": {
+          "0.5kg": 103
+        },
+        "1.5kg": {
+          "0.5kg": 51,
+          "1.5kg": 40,
+          "15kg": 1,
+          "1kg": 2,
+          "missed": 6
+        },
+        "10kg": {
+          "10kg": 109,
+          "20kg": 6,
+          "missed": 8
+        },
+        "15kg": {
+          "15kg": 62,
+          "missed": 8
+        },
+        "1kg": {
+          "1kg": 86,
+          "2kg": 1,
+          "missed": 3
+        },
+        "2.5kg": {
+          "2.5kg": 352,
+          "5kg": 1,
+          "missed": 14
+        },
+        "20kg": {
+          "20kg": 92
+        },
+        "25kg": {
+          "15kg": 3,
+          "20kg": 3,
+          "25kg": 495,
+          "missed": 1,
+          "zacisk": 1
+        },
+        "2kg": {
+          "2kg": 85,
+          "missed": 3
+        },
+        "5kg": {
+          "0.5kg": 2,
+          "2.5kg": 1,
+          "5kg": 75,
+          "missed": 5
+        },
+        "zacisk": {
+          "zacisk": 364
+        }
+      },
+      "metrics": {
+        "test_map_50_95": 0.7476829290390015,
+        "test_map_50": 0.9603108763694763,
+        "val_map_50_95": 0.8225826025009155,
+        "val_best_epoch": 18,
+        "val_to_test_gap_map_50_95": 0.07489967346191406,
+        "test_ap": {
+          "0.5kg": 0.5936084985733032,
+          "1kg": 0.6901456117630005,
+          "1.5kg": 0.6324191689491272,
+          "2kg": 0.7333175539970398,
+          "2.5kg": 0.6876487135887146,
+          "5kg": 0.7071126103401184,
+          "10kg": 0.812734067440033,
+          "15kg": 0.8301085233688354,
+          "20kg": 0.8416951894760132,
+          "25kg": 0.8754081130027771,
+          "zacisk": 0.8203141093254089
+        }
+      }
+    },
+    "2A": {
+      "threshold": 0.53,
+      "val_micro_f1": 0.9776847977684798,
+      "counts": {
+        "1.5kg": 72,
+        "0.5kg": 25,
+        "missed": 0,
+        "other": 3
+      },
+      "by_side": {
+        "yellow": {
+          "1.5kg": 49,
+          "0.5kg": 25,
+          "missed": 0,
+          "other": 2
+        },
+        "blue": {
+          "1.5kg": 23,
+          "0.5kg": 0,
+          "missed": 0,
+          "other": 1
+        }
+      },
+      "precision_0.5kg": 0.7686567164179104,
+      "confusion": {
+        "0.5kg": {
+          "0.5kg": 103
+        },
+        "1.5kg": {
+          "0.5kg": 25,
+          "1.5kg": 72,
+          "15kg": 1,
+          "1kg": 2
+        },
+        "10kg": {
+          "10kg": 123
+        },
+        "15kg": {
+          "10kg": 4,
+          "15kg": 66
+        },
+        "1kg": {
+          "1kg": 87,
+          "2kg": 3
+        },
+        "2.5kg": {
+          "2.5kg": 361,
+          "5kg": 1,
+          "missed": 5
+        },
+        "20kg": {
+          "20kg": 92
+        },
+        "25kg": {
+          "15kg": 3,
+          "20kg": 3,
+          "25kg": 496,
+          "zacisk": 1
+        },
+        "2kg": {
+          "2kg": 88
+        },
+        "5kg": {
+          "0.5kg": 2,
+          "2.5kg": 1,
+          "5kg": 80
+        },
+        "background": {
+          "0.5kg": 4,
+          "1.5kg": 2,
+          "2kg": 3,
+          "5kg": 1,
+          "zacisk": 2
+        },
+        "zacisk": {
+          "zacisk": 364
+        }
+      },
+      "metrics": {
+        "test_map_50_95": 0.7615188956260681,
+        "test_map_50": 0.980768084526062,
+        "val_map_50_95": 0.8205718994140625,
+        "val_best_epoch": 21,
+        "val_to_test_gap_map_50_95": 0.059053003787994385,
+        "test_ap": {
+          "0.5kg": 0.6709246039390564,
+          "1kg": 0.686391294002533,
+          "1.5kg": 0.7023598551750183,
+          "2kg": 0.7221105694770813,
+          "2.5kg": 0.6918199062347412,
+          "5kg": 0.7247028350830078,
+          "10kg": 0.8290413022041321,
+          "15kg": 0.8247637748718262,
+          "20kg": 0.8323931694030762,
+          "25kg": 0.8813936114311218,
+          "zacisk": 0.8108068704605103
+        }
+      }
+    }
+  },
+  "limits": [
+    "The test date is no longer untouched: its errors chose the question. These numbers say whether the known failure is fixed on this date, not how well the model does on a new one.",
+    "One seed per arm. McNemar covers which boxes are in the test set, not training randomness; 2C against Run 1 is the only look at that.",
+    "The augmentation simulates the colour of the light. A fix does not show that white balance or illumination was the real cause."
+  ]
+}

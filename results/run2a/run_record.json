@@ -1,0 +1,48 @@
+{
+  "run": "2A",
+  "arm": "treatment: flip + PlanckianJitter",
+  "commit": "4b09e46cda27bc5e3b19798b81d085b89d5de38b",
+  "rfdetr": "1.11.0",
+  "albumentations": "2.0.8",
+  "torch": "2.11.0+cu128",
+  "gpu": "Tesla T4",
+  "train_minutes": 137.2,
+  "split_sizes": {
+    "train": 1263,
+    "val": 331,
+    "test": 402
+  },
+  "train_config": {
+    "epochs": 50,
+    "batch_size": 8,
+    "grad_accum_steps": 2,
+    "lr": 0.0001,
+    "early_stopping": true,
+    "early_stopping_patience": 10,
+    "run_test": true,
+    "log_per_class_metrics": true
+  },
+  "run2": {
+    "aug_config": {
+      "HorizontalFlip": {
+        "p": 0.5
+      },
+      "PlanckianJitter": {
+        "mode": "cied",
+        "temperature_limit": [
+          4000,
+          15000
+        ],
+        "sampling_method": "uniform",
+        "p": 0.5
+      }
+    },
+    "augmentation_backend": "albumentations",
+    "seed": 20261001
+  },
+  "config_check": {
+    "ok": true,
+    "problems": []
+  },
+  "pred_threshold": 0.01
+}
