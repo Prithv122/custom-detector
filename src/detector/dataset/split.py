@@ -29,6 +29,7 @@ from detector.dataset.manifest import Record
 
 SESSION_GAP_MIN = 5
 NEAR_DUP_BITS = 30
+AUDIT_TWIN_BITS = 20
 TEST_FRACTION = (0.15, 0.25)
 TEST_TARGET = 0.20
 TEST_MIN_IMAGES_PER_CLASS = 15
@@ -179,3 +180,31 @@ def cross_split_near_duplicates(records: list[Record], max_bits: int = NEAR_DUP_
     close = np.triu(dist <= max_bits, 1)
     diff = labels[:, None] != labels[None, :]
     return int((close & diff).sum())
+
+
+def published_split_leakage(
+    records: list[Record], max_bits: int = AUDIT_TWIN_BITS
+) -> dict[str, int]:
+    """Leakage in the *published* split, over every image in the export (excluded ones too).
+
+    An image's nearest twin is the closest other image by pHash, counted when it is within
+    ``max_bits``. Many images have several equally close twins; the headline count breaks the
+    tie by manifest order (``argmin``), and the ``_min``/``_max`` counts show how far any other
+    tie rule could move it.
+    """
+    dist = hamming_matrix(records)
+    np.fill_diagonal(dist, np.iinfo(dist.dtype).max)
+    labels = np.array([r.published_split for r in records])
+    nearest = dist.min(axis=1)
+    has_twin = nearest <= max_bits
+    tied = dist == nearest[:, None]
+    other = labels[:, None] != labels[None, :]
+    return {
+        "images": len(records),
+        "with_twin": int(has_twin.sum()),
+        "with_tied_nearest_twins": int((has_twin & (tied.sum(axis=1) > 1)).sum()),
+        "nearest_twin_other_split": int((has_twin & (labels[dist.argmin(axis=1)] != labels)).sum()),
+        "nearest_twin_other_split_min": int((has_twin & ~(tied & ~other).any(axis=1)).sum()),
+        "nearest_twin_other_split_max": int((has_twin & (tied & other).any(axis=1)).sum()),
+        "any_twin_other_split": int(((dist <= max_bits) & other).any(axis=1).sum()),
+    }

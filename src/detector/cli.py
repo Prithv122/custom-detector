@@ -17,7 +17,12 @@ from detector.backdrop import format_summary, measure_split, measures_to_rows, s
 from detector.dataset import CLASSES
 from detector.dataset.manifest import build_manifest, read_manifest, write_manifest
 from detector.dataset.prepare import download, materialize
-from detector.dataset.split import assign_splits, cross_split_near_duplicates
+from detector.dataset.split import (
+    AUDIT_TWIN_BITS,
+    assign_splits,
+    cross_split_near_duplicates,
+    published_split_leakage,
+)
 from detector.demo import (
     DEFAULT_THRESHOLD,
     MAX_THRESHOLD,
@@ -139,6 +144,17 @@ def _cmd_summary(args: argparse.Namespace) -> int:
     return _summary(read_manifest(Path(args.manifest)))
 
 
+def _cmd_leak_audit(args: argparse.Namespace) -> int:
+    counts = published_split_leakage(read_manifest(Path(args.manifest)))
+    out = Path(args.out)
+    out.write_text(json.dumps({"max_bits": AUDIT_TWIN_BITS, **counts}, indent=2) + "\n")
+    print(f"Published split, 256-bit pHash, twin = distance <= {AUDIT_TWIN_BITS}:")
+    for k, v in counts.items():
+        print(f"  {k}: {v}")
+    print(f"Wrote {out}")
+    return 0
+
+
 def _summary(records: list) -> int:
     print("exclusions:", dict(Counter(r.exclusion for r in records if r.exclusion)))
     splits = ("train", "val", "test")
@@ -208,6 +224,11 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("summary", help="Print split sizes and class coverage from the manifest")
     p.add_argument("--manifest", default=str(MANIFEST))
     p.set_defaults(func=_cmd_summary)
+
+    p = sub.add_parser("leak-audit", help="Count near-duplicate leakage in the published split")
+    p.add_argument("--manifest", default=str(MANIFEST))
+    p.add_argument("--out", default=str(RESULTS_DIR / "leak_audit.json"))
+    p.set_defaults(func=_cmd_leak_audit)
 
     return parser
 

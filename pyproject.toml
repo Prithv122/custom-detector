@@ -31,8 +31,6 @@ demo = [
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-# âš ï¸ When /new-project renames src/app, update BOTH the line below AND the
-# [project.scripts] target above.
 [tool.hatch.build.targets.wheel]
 packages = ["src/detector"]
 

@@ -13,6 +13,7 @@ from detector.dataset.split import (
     NEAR_DUP_BITS,
     assign_splits,
     cross_split_near_duplicates,
+    published_split_leakage,
     sessionize,
 )
 
@@ -83,6 +84,37 @@ def test_no_session_spans_two_splits(records: list[Record]) -> None:
 
 def test_no_near_duplicates_cross_splits(records: list[Record]) -> None:
     assert cross_split_near_duplicates(records, max_bits=NEAR_DUP_BITS) == 0
+
+
+def test_published_split_leakage_matches_the_audit(records: list[Record]) -> None:
+    assert published_split_leakage(records) == {
+        "images": 2251,
+        "with_twin": 1117,
+        "with_tied_nearest_twins": 219,
+        "nearest_twin_other_split": 315,
+        "nearest_twin_other_split_min": 307,
+        "nearest_twin_other_split_max": 392,
+        "any_twin_other_split": 676,
+    }
+
+
+def test_published_split_leakage_counts_ties_both_ways() -> None:
+    def rec(split: str, bit: int) -> Record:
+        r = _rec("2025-05-01T10:00:00", bit)
+        r.published_split = split
+        return r
+
+    # 0 has two equally close twins (1 in train, 2 in valid); 3 has none within 20 bits.
+    recs = [rec("train", 0), rec("train", 0), rec("valid", 0), rec("test", 3)]
+    assert published_split_leakage(recs) == {
+        "images": 4,
+        "with_twin": 3,
+        "with_tied_nearest_twins": 3,
+        "nearest_twin_other_split": 1,  # 2 → 0; 0 → 1 and 1 → 0 by manifest order
+        "nearest_twin_other_split_min": 1,  # only 2's twins are all in another split
+        "nearest_twin_other_split_max": 3,  # 0 and 1 also have 2 among their tied twins
+        "any_twin_other_split": 3,
+    }
 
 
 def test_split_is_deterministic(records: list[Record]) -> None:

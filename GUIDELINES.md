@@ -24,7 +24,7 @@ dataset source · Kaggle GPU for training → weights on HF Hub → local CPU in
 - [x] RF-DETR-S fine-tuned; mAP@50 / mAP@50–95, per-class AP/P/R on the held-out date
 - [x] Same-colour-pair confusion analysis; val → test gap reported
 - [x] Demo app: `custom-detector demo` (local, Gradio, 2A from the Hub); no hosted URL
-- [ ] Ship gate passes
+- [x] Ship gate passes
 
 ## Project-specific notes
 

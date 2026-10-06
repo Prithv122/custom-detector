@@ -13,7 +13,8 @@ _A:_ The task is reading plate weights off a photo of a loaded barbell sleeve: 1
 before training: 2,251 images, of which I excluded 255 by rule (competition-video crops and press
 photos the uploader can't license, plus unlabelled and contradictory ones), leaving 1,996. I also
 replaced its split, because a 256-bit perceptual hash showed 315 images whose nearest
-near-identical twin was on the other side. My split is by capture date and session: the test set is one whole date
+near-identical twin was on the other side (ties broken by file order; 676 have at least one twin
+across, and `custom-detector leak-audit` recounts both). My split is by capture date and session: the test set is one whole date
 the model never sees (402 images), val is whole sessions (331), train is the rest (1,263). Every
 exclusion and split assignment is in one committed manifest, so the set rebuilds exactly.
 

@@ -423,9 +423,10 @@ a separate, dated entry.
 Programmatic over all 2,251 images; model vision only on 28 flagged or sampled images.
 
 - **Leakage in the published split.** 256-bit pHash: 1,117 images have a near-identical twin
-  (distance ≤ 20); for 315 of them the nearest twin sits in a different split. This is a one-off
-  audit count; no committed script reproduces it (a ship-time recount confirmed 315 for the
-  nearest-twin definition, and about 676 if any twin in another split counts). Cause: each session is a
+  (distance ≤ 20); for 315 of them the nearest twin sits in a different split. Reproduced
+  2026-10-04 by `custom-detector leak-audit` (`results/leak_audit.json`, tested): 219 images have
+  several equally close twins, and 315 breaks those ties by manifest order; any tie rule gives
+  307–392, and 676 images have at least one twin in another split. Cause: each session is a
   series of shots of one rig with one small plate swapped between shots — `…120057` (train) and
   `…120030` (valid) are the same bar, 27 s apart. No exact duplicates (SHA-256).
 - **Near-duplicates never cross dates.** A 64-bit pHash flagged 1,311 cross-date pairs; all were
@@ -870,7 +871,7 @@ layer could not survive the switch (no independent ground truth in a public data
 | Approach | Why rejected |
 |---|---|
 | Own gym photography (Gym A/Gym B) | Superseded 2026-09-24 — ~225 photos + labelling for a result a public dataset now gives. |
-| ProjektCiezary's published split | Leaks: 315 images have a near-identical twin in another split. |
+| ProjektCiezary's published split | Leaks: 315 images' nearest near-identical twin is in another split (ties by manifest order); 676 have at least one twin there. |
 | Keeping `ZE_*` and press images | Third-party footage/photos; the uploader's CC BY can't license them. |
 | Six classes (dropping 0.5–2 kg) | Would leave visible plates unboxed = trained as background. Merge, don't drop, if ever reduced. |
 | Loaded-weight metric on the public set | No independent ground truth; it would just re-score the labels. |

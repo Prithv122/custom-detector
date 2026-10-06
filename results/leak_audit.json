@@ -1,0 +1,10 @@
+{
+  "max_bits": 20,
+  "images": 2251,
+  "with_twin": 1117,
+  "with_tied_nearest_twins": 219,
+  "nearest_twin_other_split": 315,
+  "nearest_twin_other_split_min": 307,
+  "nearest_twin_other_split_max": 392,
+  "any_twin_other_split": 676
+}

@@ -54,8 +54,9 @@ Every image, its exclusion reason and its new split are in [`data/manifest.csv`]
 Photos in this dataset come in sessions: one bar photographed over and over with a small plate
 swapped between shots. The published split was random per image, so near-copies landed on both
 sides: by a 256-bit perceptual hash, 315 images have their nearest near-identical twin in a
-different split. That count comes from the one-off dataset audit (NOTES.md), not from
-committed code: no script in the repo reproduces the 315.
+different split (ties between equally close twins broken by file order; any tie rule gives
+307–392, and 676 images have *some* twin across the split). `custom-detector leak-audit`
+recounts all of these from the committed manifest.
 A model scored on that test set is partly scored on photos it trained on.
 
 New split, grouped so near-copies can't cross it:
@@ -91,7 +92,7 @@ flowchart LR
 | Decision | Chose | Over | Why |
 |---|---|---|---|
 | Data | Audited public dataset | Photographing ~225 of my own | Per-weight boxes already existed; the audit, not the collection, is where the judgement is. |
-| Split | Whole date for test, whole sessions for val | The published random split | The random split leaks near-duplicates (315 images). |
+| Split | Whole date for test, whole sessions for val | The published random split | The random split leaks near-duplicates (315 images by nearest twin, ties by file order; 676 with any twin). |
 | Classes | All 10 weights + collar | The 6 heaviest | Dropping the small plates would leave visible plates unboxed, i.e. labelled as background. |
 | Questionable images | Excluded by rule, with reasons in the manifest | Trusting the dataset's CC BY label | A licence from the uploader can't cover broadcast footage or agency photos. |
 | Detector | RF-DETR-S | Ultralytics YOLO | YOLO is AGPL-3.0; RF-DETR-S is Apache-2.0 and small enough to train on a free Kaggle GPU. |
@@ -267,6 +268,7 @@ git clone https://github.com/Prithv122/custom-detector.git
 cd custom-detector
 uv sync
 uv run pytest            # split invariants are checked from the committed manifest
+uv run custom-detector leak-audit   # recount the published split's leakage (315)
 ```
 
 The demo runs the published 2A checkpoint on CPU, with no dataset or API key needed:
